@@ -10,6 +10,9 @@ import dotenv from "dotenv";
 import AppError from "./src/utils/AppError.js";
 import userRoutes from "./src/routes/userRoutes.js";
 import connectDB from "./src/db/connectDB.js";
+import superAdminRoutes from "./src/routes/superAdminRoutes.js";
+import commonRoutes from "./src/routes/commonRoutes.js";
+import adminRoutes from "./src/routes/adminRoutes.js";
 
 dotenv.config(); // Load environment variables
 
@@ -46,13 +49,16 @@ app.get("/", (req, res) => {
     res.status(200).json({
         status: "success",
         data: {
-            message: "Welcome to Malonke backend!",
+            message: "Welcome to Malonke",
         },
     });
 });
 
 //Other Routes
+app.use("/api/v1/superAdmin",superAdminRoutes);
+app.use("/api/v1/admin",adminRoutes);
 app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/common", commonRoutes);
 
 // Handle undefined routes
 app.all("*", (req, res, next) => {
@@ -60,7 +66,7 @@ app.all("*", (req, res, next) => {
 });
 
 // Global error handling middleware
-app.use((err, req, res, next) => {
+app.use((err, req, res) => {
     console.error("Error:", err.stack);
     res.status(err.statusCode || 500).json({
         status: err.status || "error",
