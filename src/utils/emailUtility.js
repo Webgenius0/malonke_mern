@@ -2,12 +2,12 @@ import nodemailer from 'nodemailer';
 import catchAsync from './catchAsync.js';
 import AppError from './AppError.js';
 
-export const emailUtility = catchAsync(async (options) => {
+export const emailUtility = catchAsync(async (options,next) => {
     const { to, subject, text, html } = options;
 
     // Basic validation for required fields
     if (!to || !subject || (!text && !html)) {
-        throw new AppError('Recipient email, subject, and content are required', 400);
+        next(new AppError('Recipient email, subject, and content are required', 400));
     }
 
     // Set up the nodemailer transporter

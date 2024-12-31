@@ -1,20 +1,9 @@
-import mongoose from 'mongoose';
-import {comparePassword, preSaveHook, usernameValidation} from "../utils/commonSchemaMethods.js";
+import mongoose from "mongoose";
+import {comparePassword,  preSaveHook, usernameValidation} from "../utils/commonSchemaMethods.js";
 
-const userSchema = new mongoose.Schema(
+
+const superAdminSchema = new mongoose.Schema(
     {
-        superAdminID:{
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "SuperAdmin",
-            required: [true,"Super Admin id is required!"],
-            index: true
-        },
-        adminID:{
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Admin",
-            required: [true,"Admin id is required!"],
-            index: true
-        },
         firstName: {
             type: String,
             required: [true, 'First name is required'],
@@ -50,20 +39,15 @@ const userSchema = new mongoose.Schema(
             required: [true, 'Password is required'],
             index: true,
             trim: true,
-            match: [/^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/, "Password must be at least 8 characters long and include at least uppercase English letter,lowercase English letter, one number, and one special character."],
         },
         refreshToken: {
             type: String,
             index: true,
             trim: true,
         },
-        isTermAgree: {
-            type: Boolean,
-            default: false,
-        },
         role: {
             type: String,
-            default: 'user',
+            default: 'superAdmin',
             index: true,
             trim: true,
         },
@@ -71,11 +55,10 @@ const userSchema = new mongoose.Schema(
     { timestamps: true, versionKey: false }
 );
 
-
 // Apply the password hashing pre-save hook and the comparePassword method
-userSchema.pre("save", preSaveHook);
-userSchema.methods.comparePassword = comparePassword;
+superAdminSchema.pre("save", preSaveHook);
+superAdminSchema.methods.comparePassword = comparePassword;
 
 
-const User = mongoose.model('users', userSchema);
-export default User;
+const SuperAdmin = mongoose.model("superadmins", superAdminSchema);
+export default SuperAdmin;
