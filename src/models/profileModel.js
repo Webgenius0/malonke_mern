@@ -1,4 +1,3 @@
-// Import mongoose and validator
 import mongoose, { Schema } from "mongoose";
 import validator from "validator";
 
@@ -14,11 +13,11 @@ const profileSchema = new Schema(
     avatar: {
       type: String,
       validate: {
-        validator: (v) =>
-          /^data:image\/[a-z]+;base64,/.test(v) || /^(https?:\/\/)/.test(v),
-        message: "Invalid avatar format. Use a Base64 string or URL.",
+        // Allow either an empty string or a valid Base64 image string
+        validator: (v) => v === "" || /^data:image\/[a-z]+;base64,/.test(v),
+        message: "Invalid avatar format. Use a Base64 string.",
       },
-      default: "https://example.com/default-avatar.png",
+      default: "",
     },
     address: {
       type: String,
@@ -65,5 +64,5 @@ const profileSchema = new Schema(
   { timestamps: true, versionKey: false }
 );
 
-const Profile = mongoose.model("profiles", profileSchema);
+const Profile = mongoose.model("Profile", profileSchema);
 export default Profile;

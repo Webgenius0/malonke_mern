@@ -11,6 +11,7 @@ import dotenv from "dotenv";
 import AppError from "./src/utils/AppError.js";
 import userRoutes from "./src/routes/userRoutes.js";
 import profileRoutes from "./src/routes/profileRoutes.js";
+import faqRoutes from "./src/routes/FAQRoutes.js";
 import connectDB from "./src/db/connectDB.js";
 
 dotenv.config(); // Load environment variables
@@ -59,6 +60,7 @@ app.get("/", (req, res) => {
 //Other Routes
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/profile", profileRoutes);
+app.use("/api/v1/faqs", faqRoutes);
 
 // Handle undefined routes
 app.all("*", (req, res, next) => {

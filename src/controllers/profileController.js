@@ -1,6 +1,11 @@
 import fs from "fs";
 import path from "path";
-import Profile from "../models/profileModel";
+import { fileURLToPath } from "url";
+import Profile from "../models/profileModel.js";
+
+// Define __dirname manually for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Function to convert image file to Base64
 const convertImageToBase64 = (filePath) => {
@@ -12,7 +17,6 @@ const convertImageToBase64 = (filePath) => {
 export const createOrUpdateProfile = async (req, res) => {
   try {
     const {
-      userID,
       address,
       city,
       state,
@@ -23,16 +27,22 @@ export const createOrUpdateProfile = async (req, res) => {
       birthState,
     } = req.body;
 
+    const userID = "677374fe3a118f9b68893c50";
     let avatarUrl = "";
 
-    // Handle file upload
+    // Handle file upload if avatar is provided
     if (req.files && req.files.avatar) {
       const avatarFile = req.files.avatar;
       const fileExtension = avatarFile.name.split(".").pop();
-      const fileName = `${userID}-avatar.${fileExtension}`;
-      const filePath = path.join(__dirname, "../../uploads", fileName);
+      const validExtensions = ["jpeg", "jpg", "png"];
 
-      // Save the file to disk
+      if (!validExtensions.includes(fileExtension.toLowerCase())) {
+        return res.status(400).json({ message: "Invalid file type for avatar" });
+      }
+
+      const fileName = `${userID}-avatar.${fileExtension}`;
+      const filePath = path.join(__dirname, "../../public/uploads", fileName);
+
       avatarFile.mv(filePath, (err) => {
         if (err) {
           return res
@@ -41,10 +51,7 @@ export const createOrUpdateProfile = async (req, res) => {
         }
       });
 
-      // Convert the image to Base64
       const base64Image = convertImageToBase64(filePath);
-
-      // Generate the Base64 URL format
       avatarUrl = `data:image/${fileExtension};base64,${base64Image}`;
     }
 
@@ -56,7 +63,7 @@ export const createOrUpdateProfile = async (req, res) => {
       const updatedProfile = await Profile.findByIdAndUpdate(
         existingProfile._id,
         {
-          avatar: avatarUrl,
+          avatar: avatarUrl, 
           address,
           city,
           state,
@@ -66,7 +73,7 @@ export const createOrUpdateProfile = async (req, res) => {
           birthCity,
           birthState,
         },
-        { new: true, runValidators: true } // Return the updated document and apply validations
+        { new: true, runValidators: true }
       );
       return res.status(200).json({
         message: "Profile updated successfully",
