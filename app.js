@@ -65,14 +65,18 @@ app.all("*", (req, res, next) => {
     next(new AppError(`Cannot find ${req.originalUrl} on this server`, 404));
 });
 
-// Global error handling middleware
-app.use((err, req, res) => {
+//Global Error Handler
+app.use((err, req, res, next) => {
     console.error("Error:", err.stack);
-    res.status(err.statusCode || 500).json({
-        status: err.status || "error",
-        message: err.message || "An unexpected error occurred",
+    const statusCode = err.statusCode || 500;
+    const message = err.message || "An unexpected error occurred, please try again later.";
+    const userMessage = err.userMessage || message;
+    res.status(statusCode).json({
+        status: statusCode === 500 ? "error" : err.status || "success",
+        message: userMessage,
     });
 });
+
 
 // Connect to MongoDB
 connectDB();
