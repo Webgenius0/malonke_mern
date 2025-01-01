@@ -14,7 +14,7 @@ import superAdminRoutes from "./src/routes/superAdminRoutes.js";
 import commonRoutes from "./src/routes/commonRoutes.js";
 import adminRoutes from "./src/routes/adminRoutes.js";
 
-dotenv.config(); // Load environment variables
+dotenv.config();
 
 const app = express();
 
@@ -76,7 +76,6 @@ app.use((err, req, res, next) => {
         message: userMessage,
     });
 });
-
 
 // Connect to MongoDB
 connectDB();
