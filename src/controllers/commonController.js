@@ -5,6 +5,7 @@ import Admin from "../models/adminModel.js";
 import User from "../models/userModel.js";
 import AppError from "../utils/AppError.js";
 import catchAsync from "../utils/catchAsync.js";
+import {getModelByRole} from "../utils/getModelByRole.js";
 
 // Helper function to generate access and refresh tokens
 const generateAccessToken = (userId, role) => {
@@ -27,19 +28,13 @@ export const login = catchAsync(async (req, res, next) => {
         return next(new AppError("Identifier, password, and role are required", 400));
     }
 
-    console.log('Received identifier:', identifier);
-    console.log('Received role:', role);
 
-    // Identify model based on role
+    // Get model based on role
     let Model;
-    if (role === "superAdmin") {
-        Model = SuperAdmin;
-    } else if (role === "admin") {
-        Model = Admin;
-    } else if (role === "user") {
-        Model = User;
-    } else {
-        return next(new AppError("Invalid role provided", 400));
+    try {
+        Model = await getModelByRole(role);
+    } catch (err) {
+        return next(err);
     }
 
     // Find user by email or username
@@ -99,7 +94,9 @@ export const login = catchAsync(async (req, res, next) => {
 
 
 
-
+/**
+ * Refresh Token Controller
+ */
 export const refreshAccessToken = catchAsync(async (req, res,next) => {
     const { accessToken, newRefreshToken } = await refreshAccessTokenService(req,next);
 
@@ -123,7 +120,9 @@ export const refreshAccessToken = catchAsync(async (req, res,next) => {
 });
 
 
-// Helper function to handle refresh token logic
+/**
+ * Refresh Token Service
+ */
 const refreshAccessTokenService = async (req, next) => {
     const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
 
@@ -156,3 +155,53 @@ const refreshAccessTokenService = async (req, next) => {
         next(new AppError("Invalid refresh token", 401));
     }
 };
+
+
+
+/**
+ * Change Password Controller
+ */
+export const changePassword = catchAsync(async (req, res, next) => {
+    const { id, role } = req.user;
+    const { oldPassword, newPassword, confirmPassword } = req.body;
+
+    // Validate required fields
+    if (!oldPassword || !newPassword || !confirmPassword) {
+        return next(new AppError("All fields (oldPassword, newPassword, confirmPassword) are required.", 400));
+    }
+
+    // Validate password confirmation
+    if (newPassword !== confirmPassword) {
+        return next(new AppError("New password and confirm password do not match.", 400));
+    }
+
+    // Get model based on role
+    let Model;
+    try {
+        Model = await getModelByRole(role);
+    } catch (err) {
+        return next(err);
+    }
+
+    // Fetch user by ID
+    const user = await Model.findById(id);
+    if (!user) {
+        return next(new AppError("User does not exist.", 404));
+    }
+
+    // Verify old password
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+        return next(new AppError("Old password is incorrect.", 401));
+    }
+
+    // Hash new password and update
+    user.password = newPassword;
+    await user.save();
+
+    // Success response
+    res.status(200).json({
+        success: true,
+        message: "Password changed successfully.",
+    });
+});

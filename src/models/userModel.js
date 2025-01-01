@@ -50,16 +50,21 @@ const userSchema = new mongoose.Schema(
             required: [true, 'Password is required'],
             index: true,
             trim: true,
-            match: [/^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/, "Password must be at least 8 characters long and include at least uppercase English letter,lowercase English letter, one number, and one special character."],
+            minlength: 8,
         },
+        viewOnly:{type:Boolean,default:true},
         refreshToken: {
             type: String,
             index: true,
             trim: true,
         },
-        isTermAgree: {
+        isNdaAgree: {
             type: Boolean,
             default: false,
+        },
+        agreedAt:{
+            type: Date,
+            default: Date.now,
         },
         role: {
             type: String,

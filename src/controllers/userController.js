@@ -1,178 +1,222 @@
 import User from "../models/userModel.js";
-import Otp from "../models/otpModel.js";
-import bcrypt from "bcrypt";
 import crypto from "crypto";
 import catchAsync from "../utils/catchAsync.js";
 import AppError from "../utils/AppError.js";
 import {emailUtility} from "../utils/emailUtility.js";
+import MagicLink from "../models/magicLinkModel.js";
+import Admin from "../models/adminModel.js";
+/**
+ * Generate and Send Magic Link
+ */
+export const sendInviteLink = catchAsync(async (req, res, next) => {
+    const {id} = req.user;
+    const {email} = req.body;
 
+    if (!email) return next(new AppError("Email is required!", 400));
 
-export const registration = catchAsync(async (req, res, next) => {
-  const {
-    firstName,
-    lastName,
-    email,
-    password,
-    confirmPassword,
-    isTermAgree,
-    role,
-  } = req.body;
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiration = Date.now() + 2 * 24 * 60 * 60 * 1000;
 
-  // Check required fields
-  if (
-      !firstName ||
-      !lastName ||
-      !email ||
-      !password ||
-      !confirmPassword ||
-      isTermAgree === undefined
-  ) {
-    return next(
-        new AppError(
-            "First Name, Last Name, email, password, confirmPassword, and isTermAgree are required",
-            400
-        )
-    );
-  }
+    const magicLink = `${process.env.ORIGIN_URL}/verify?token=${token}&email=${email}`;
 
-  // Check if passwords match
-  if (password !== confirmPassword) {
-    return next(new AppError("Passwords do not match", 400));
-  }
-
-
-
-// Validate password strength using regex
-  const passwordRegex = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/;
-  if (!passwordRegex.test(password)) {
-    return next(new AppError("Password must be at least 8 characters long and include at least uppercase English letter,lowercase English letter, one number," +
-        "and one special character.", 400));
-  }
-
-  // Check if email already exists
-  const existingUser = await User.findOne({ email });
-  if (existingUser) {
-    return next(
-        new AppError("An account with this email already exists.", 409)
-    );
-  }
-
-  // Hash the password
-  const hashedPassword = await bcrypt.hash(password, 10);
-
-  // Create new user in a pending state
-  const newUser = await User.create({
-    firstName,
-    lastName,
-    email,
-    password: hashedPassword,
-    refreshToken: "",
-    isTermAgree,
-    role: role || "user",
-  });
-
-  // Generate OTP
-  const otp = crypto.randomInt(100000, 999999).toString();
-  const otpExpiration = new Date(Date.now() + 15 * 60 * 1000);
-
-  // Save OTP in the database
-  await Otp.create({
-    otp,
-    userID: newUser._id,
-    email,
-    purpose: "registration",
-    isUsed: false,
-    expiresIn: otpExpiration,
-  });
-
-  // Email options
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: email,
-    subject: "Your OTP for Registration Verification",
-    text: `Dear ${firstName},
-    We received a request to register your account. Please use the OTP below to verify your email address and complete your registration:
-    OTP: ${otp}
-    This OTP is valid for 15 minutes. If you did not initiate this request, please ignore this email.
-
-    Thank you,
-    The Malonke Team`,
-    html: `
-        <div style="font-family: Arial, sans-serif; font-size: 16px; line-height: 1.5; color: #333;">
-            <h2 style="color: #4CAF50;">Verify Your Email</h2>
-            <p>Dear ${firstName},</p>
-            <p>We received a request to register your account. Please use the OTP below to verify your email address and complete your registration:</p>
-            <div style="margin: 20px 0; font-size: 20px; font-weight: bold; color: #4CAF50;">${otp}</div>
-            <p>This OTP is valid for 10 minutes. If you did not initiate this request, please ignore this email.</p>
+    const options = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: "Invitation Link to Complete Your Registration!",
+        html: `<html>
+          <head>
+          <style>
+          body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+          }
+          .container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+          }
+          .header {
+            text-align: center;
+            padding-bottom: 20px;
+          }
+          .header h1 {
+            font-size: 24px;
+            color: #333;
+          }
+          .content {
+            font-size: 16px;
+            color: #555;
+            line-height: 1.6;
+          }
+          .important {
+            color: #d9534f;
+            font-weight: bold;
+          }
+          .link-button {
+            display: inline-block;
+            padding: 12px 20px;
+            background-color: #29ABE2;
+            border-radius: 4px;
+            font-size: 16px;
+            margin-top: 20px;
+          }
+          
+          .link-button:hover {
+          background-color: #255A87;
+          }
+          
+          .footer {
+            text-align: center;
+            font-size: 14px;
+            color: #888;
+            margin-top: 20px;
+          }
+          .footer p {
+            margin: 0;
+            font-weight:500;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Invitation to Complete Your Registration</h1>
+          </div>
+          <div class="content">
+            <p>Hello there,</p>
+            <p>We received a request to register your account. Please click the link below to verify your email address and complete your registration:</p>
+            <p><a href="${magicLink}" class="link-button" style="color: white;font-weight: 500 ; text-decoration: none;">Verify Your Email</a></p>
+            <p>This link is valid for 2 days. If you did not initiate this request, please ignore this email.</p>
+            <p class="important">Important: Please don't delete and share this verification link with anyone else, 
+             as you will need it to complete the registration process. Once you click the link, you will be redirected
+             to our platform where you can finish your registration.</p>
+          </div>
+          <div class="footer">
             <p>Thank you,</p>
             <p>The Malonke Team</p>
+          </div>
         </div>
-    `,
-  };
+      </body>
+    </html>`,
+    };
+    await emailUtility(options, next);
+    await MagicLink.create({
+        email,
+        magicLink,
+        adminID: id,
+        expiresAt: new Date(expiration),
+    });
 
-  // Send OTP email
-  await emailUtility(mailOptions,next);
+    res.status(200).json({
+        success: true,
+        message: 'Invitation link sent to the provided email.',
+    });
 
-  res.status(201).json({
-    status: "success",
-    message: "User registered successfully! Please verify your email with the OTP sent.",
-    data: {
-      id: newUser._id,
-      email: newUser.email,
-    },
-  });
+})
+
+
+/**
+ * Verify Magic Link
+ */
+export const verifyMagicLink = catchAsync(async (req, res, next) => {
+
+    const { email, magicLink } = req.body;
+
+    if (!email || !magicLink) {
+        return next(new AppError("Email and Magic Link are required!", 400));
+    }
+
+    const isValid = await MagicLink.findOne({ email, magicLink });
+
+    if (!isValid) {
+        return next(new AppError("Magic Link or email is invalid!", 400));
+    }
+
+    if (isValid.expiresAt < Date.now()) {
+        return next(new AppError("Magic Link has expired!", 400));
+    }
+
+    if (isValid.isUsed) {
+        return next(new AppError("This link has already been used.", 400));
+    }
+
+    isValid.isUsed = true;
+    await isValid.save();
+
+    res.status(200).json({
+        status: "success",
+        message: "Successfully verified",
+        data: { adminID: isValid.adminID, isUsed: isValid.isUsed },
+    });
 });
 
-// Verify OTP Endpoint
-export const verifyOtp = catchAsync(async (req, res, next) => {
-  const { email, otp } = req.body;
 
-  // Validate and sanitize input fields
-  if (!email || !otp) {
-    return next(new AppError("Email and OTP are required!", 400));
-  }
+/**
+ * User Registration
+ */
+export const createUser = catchAsync(async (req, res, next) => {
+    const {
+        adminID,
+        firstName,
+        lastName,
+        username,
+        email,
+        password,
+        confirmPassword,
+        isNdaAgree
+    } = req.body;
 
-  const sanitizedEmail = email.trim().toLowerCase();
-  const sanitizedOtp = otp.trim();
+    // Check if the user already exists (based on email or username)
+    const existingUserByEmail = await User.findOne({ email });
+    if (existingUserByEmail) {
+        return next(new AppError('Email already in use', 400));
+    }
 
-  // Find the OTP
-  const validOtp = await Otp.findOne({
-    email: sanitizedEmail,
-    otp: sanitizedOtp,
-    purpose: "registration",
-    isUsed: false,
-  });
+    const existingUserByUsername = await User.findOne({ username });
+    if (existingUserByUsername) {
+        return next(new AppError('Username already in use', 400));
+    }
 
-  if (!validOtp) {
-    return next(new AppError("Invalid OTP!", 400));
-  }
+    if(password !== confirmPassword) {
+        return next(new AppError('Passwords do not match', 400));
+    }
 
-  if (validOtp.expiresIn < new Date()) {
-    return next(new AppError("OTP has expired!", 400));
-  }
+    if(!isNdaAgree){
+        return next(new AppError('User must need to agree NDA!', 400));
+    }
 
-  // Mark OTP as used and nullify its value for security
-  validOtp.isUsed = true;
-  validOtp.otp = null;
-  await validOtp.save();
+    // Validate adminID
+    const admin = await Admin.findById(adminID);
+    if (!admin) {
+        return next(new AppError('Invalid Admin ID provided', 400));
+    }
 
-  // Activate the user
-  const user = await User.findOneAndUpdate(
-      { email: sanitizedEmail },
-      { isActive: true },
-      { new: true }
-  );
 
-  if (!user) {
-    return next(new AppError("User not found!", 404));
-  }
+    // Create a new user object
+    const newUser = new User({
+        superAdminID: admin.superAdminID,
+        adminID,
+        firstName,
+        lastName,
+        username,
+        email,
+        password,
+        isNdaAgree
+    });
 
-  res.status(200).json({
-    status: "success",
-    message: "OTP verified successfully! Registration completed.",
-    data: {
-      id: user._id,
-      email: user.email,
-    },
-  });
+    await newUser.save();
+
+    // Respond with success message
+    res.status(201).json({
+        status: 'success',
+        message: 'User created successfully',
+    });
 });
+
+
