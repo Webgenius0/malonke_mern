@@ -16,6 +16,7 @@ import connectDB from "./src/db/connectDB.js";
 import superAdminRoutes from "./src/routes/superAdminRoutes.js";
 import commonRoutes from "./src/routes/commonRoutes.js";
 import adminRoutes from "./src/routes/adminRoutes.js";
+import contactRoutes from "./src/routes/contactRoutes.js";
 
 dotenv.config(); // Load environment variables
 
@@ -52,22 +53,22 @@ app.use(cookieParser());
 
 // Root route
 app.get("/", (req, res) => {
-    res.status(200).json({
-        status: "success",
-        data: {
-            message: "Welcome to Malonke",
-        },
-    });
-
+  res.status(200).json({
+    status: "success",
+    data: {
+      message: "Welcome to Malonke",
+    },
+  });
 });
 
 //Other Routes
-app.use("/api/v1/superAdmin",superAdminRoutes);
-app.use("/api/v1/admin",adminRoutes);
+app.use("/api/v1/superAdmin", superAdminRoutes);
+app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/common", commonRoutes);
 app.use("/api/v1/profile", profileRoutes);
 app.use("/api/v1/faqs", faqRoutes);
+app.use("/api/v1/contact", contactRoutes);
 
 // Handle undefined routes
 app.all("*", (req, res, next) => {
@@ -81,7 +82,6 @@ app.use((err, req, res, next) => {
     status: err.status || "error",
     message: err.message || "An unexpected error occurred",
   });
-
 });
 
 // Connect to MongoDB

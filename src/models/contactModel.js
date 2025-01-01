@@ -1,14 +1,28 @@
 import mongoose, { Schema } from "mongoose";
 import validator from "validator";
 
+const { ObjectId } = Schema.Types;
+
 const contactSchema = new Schema(
   {
-    name: {
+    userID: {
+      type: ObjectId,
+      ref: "User",
+      required: true,
+    },
+    firstName: {
       type: String,
-      required: [true, "Name is required"],
+      required: [true, "First name is required"],
       trim: true,
-      minlength: [2, "Name must be at least 2 characters long"],
-      maxlength: [100, "Name must be less than 100 characters long"],
+      validate: {
+        validator: (value) => /^[a-zA-Z\s]+$/.test(value),
+        message: "Name must contain only letters and spaces",
+      },
+    },
+    lastName: {
+      type: String,
+      required: [true, "Last lame is required"],
+      trim: true,
       validate: {
         validator: (value) => /^[a-zA-Z\s]+$/.test(value),
         message: "Name must contain only letters and spaces",
@@ -22,14 +36,6 @@ const contactSchema = new Schema(
       validate: {
         validator: validator.isEmail,
         message: "Email is invalid",
-      },
-    },
-    phone: {
-      type: String,
-      trim: true,
-      validate: {
-        validator: validator.isMobilePhone,
-        message: "Phone number is invalid",
       },
     },
     subject: {
