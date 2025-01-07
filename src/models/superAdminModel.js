@@ -41,11 +41,6 @@ const superAdminSchema = new mongoose.Schema(
             trim: true,
             minlength: 8,
         },
-        refreshToken: {
-            type: String,
-            index: true,
-            trim: true,
-        },
         role: {
             type: String,
             default: 'superAdmin',

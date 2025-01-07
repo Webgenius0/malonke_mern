@@ -1,8 +1,5 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import SuperAdmin from "../models/superAdminModel.js";
-import Admin from "../models/adminModel.js";
-import User from "../models/userModel.js";
 import AppError from "../utils/AppError.js";
 import catchAsync from "../utils/catchAsync.js";
 import {getModelByRole} from "../utils/getModelByRole.js";
@@ -10,10 +7,6 @@ import {getModelByRole} from "../utils/getModelByRole.js";
 // Helper function to generate access and refresh tokens
 const generateAccessToken = (userId, role) => {
     return jwt.sign({ id: userId, role }, process.env.JWT_SECRET_ACCESS, { expiresIn: process.env.JWT_ACCESS_EXPIRES_IN });
-};
-
-const generateRefreshToken = (userId, role) => {
-    return jwt.sign({ id: userId, role }, process.env.JWT_SECRET_REFRESH, { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN});
 };
 
 
@@ -56,27 +49,15 @@ export const login = catchAsync(async (req, res, next) => {
     }
 
     // Generate access and refresh tokens
-    const accessToken = generateAccessToken(user._id, role);
-    const refreshToken = generateRefreshToken(user._id, role);
-
-    // Save refresh token in DB
-    user.refreshToken = refreshToken;
+    const token = generateAccessToken(user._id, role);
     await user.save();
 
     // Set access token as HTTP-only cookie
-    res.cookie("accessToken", accessToken, {
-        httpOnly: false,
+    res.cookie("token", token, {
+        httpOnly: true,
         secure: false,
         sameSite: "strict",
         maxAge: 3600 * 1000,
-    });
-
-    // Set refresh token as HTTP-only cookie
-    res.cookie("refreshToken", refreshToken, {
-        httpOnly: false,
-        secure: false,
-        sameSite: "strict",
-        maxAge: 30 * 24 * 60 * 60 * 1000,
     });
 
     // Remove sensitive data from the response
@@ -87,74 +68,73 @@ export const login = catchAsync(async (req, res, next) => {
         status: "success",
         message: "Logged in successfully",
         user: userData,
-        accessToken,
-        refreshToken
+        token
     });
 });
 
 
 
-/**
- * Refresh Token Controller
- */
-export const refreshAccessToken = catchAsync(async (req, res,next) => {
-    const { accessToken, newRefreshToken } = await refreshAccessTokenService(req,next);
-
-    // Set access token as HTTP-only cookie
-    res.cookie("accessToken", accessToken, {
-        httpOnly: false,
-        secure: false,
-        sameSite: "strict",
-        maxAge: 3600 * 1000,
-    });
-
-    // Set refresh token as HTTP-only cookie
-    res.cookie("refreshToken", newRefreshToken, {
-        httpOnly: false,
-        secure: false,
-        sameSite: "strict",
-        maxAge: 30 * 24 * 60 * 60 * 1000,
-    });
-
-    return res.status(200).json({status: "success",data:{accessToken:accessToken, refreshToken:newRefreshToken}});
-});
-
-
-/**
- * Refresh Token Service
- */
-const refreshAccessTokenService = async (req, next) => {
-    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
-
-    if (!incomingRefreshToken) {
-        next(new AppError("Unauthorized request", 401));
-    }
-
-    try {
-        const decodedToken = jwt.verify(incomingRefreshToken, process.env.JWT_SECRET_REFRESH);
-
-        const user = await User.findById(decodedToken.id);
-        if (!user) {
-            next(new AppError("Unauthorized request", 401));
-        }
-
-        if (incomingRefreshToken !== user.refreshToken) {
-            next(new AppError("Refresh token expired", 401));
-        }
-
-        // Generate new access and refresh tokens
-        const accessToken = generateAccessToken(user._id, user.role);
-        const refreshToken = generateRefreshToken(user._id, user.role);
-
-        // Save new refresh token in DB
-        user.refreshToken = refreshToken;
-        await user.save();
-
-        return { accessToken, newRefreshToken: refreshToken };
-    } catch (error) {
-        next(new AppError("Invalid refresh token", 401));
-    }
-};
+// /**
+//  * Refresh Token Controller
+//  */
+// export const refreshAccessToken = catchAsync(async (req, res,next) => {
+//     const { accessToken, newRefreshToken } = await refreshAccessTokenService(req,next);
+//
+//     // Set access token as HTTP-only cookie
+//     res.cookie("accessToken", accessToken, {
+//         httpOnly: false,
+//         secure: false,
+//         sameSite: "strict",
+//         maxAge: 3600 * 1000,
+//     });
+//
+//     // Set refresh token as HTTP-only cookie
+//     res.cookie("refreshToken", newRefreshToken, {
+//         httpOnly: false,
+//         secure: false,
+//         sameSite: "strict",
+//         maxAge: 30 * 24 * 60 * 60 * 1000,
+//     });
+//
+//     return res.status(200).json({status: "success",data:{accessToken:accessToken, refreshToken:newRefreshToken}});
+// });
+//
+//
+// /**
+//  * Refresh Token Service
+//  */
+// const refreshAccessTokenService = async (req, next) => {
+//     const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
+//
+//     if (!incomingRefreshToken) {
+//         next(new AppError("Unauthorized request", 401));
+//     }
+//
+//     try {
+//         const decodedToken = jwt.verify(incomingRefreshToken, process.env.JWT_SECRET_REFRESH);
+//
+//         const user = await User.findById(decodedToken.id);
+//         if (!user) {
+//             next(new AppError("Unauthorized request", 401));
+//         }
+//
+//         if (incomingRefreshToken !== user.refreshToken) {
+//             next(new AppError("Refresh token expired", 401));
+//         }
+//
+//         // Generate new access and refresh tokens
+//         const accessToken = generateAccessToken(user._id, user.role);
+//         const refreshToken = generateRefreshToken(user._id, user.role);
+//
+//         // Save new refresh token in DB
+//         user.refreshToken = refreshToken;
+//         await user.save();
+//
+//         return { accessToken, newRefreshToken: refreshToken };
+//     } catch (error) {
+//         next(new AppError("Invalid refresh token", 401));
+//     }
+// };
 
 
 
@@ -204,4 +184,28 @@ export const changePassword = catchAsync(async (req, res, next) => {
         success: true,
         message: "Password changed successfully.",
     });
+});
+
+
+/**
+ * Check for Role
+ */
+
+export const checkForRole = catchAsync(async (req, res, next) => {
+    const role  = req.params.role;
+    console.log(role);
+    let Model;
+    try {
+        Model = await getModelByRole(role);
+    } catch (err) {
+        return next(new AppError('Error getting model by role', 500));
+    }
+
+    const isValid = await Model.findOne({ role });
+
+    if (!isValid) {
+        return next(new AppError("Role does not exist or is invalid.", 401));
+    }
+
+    res.status(200).json({ status: true, role:isValid.role });
 });

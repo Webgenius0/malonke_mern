@@ -5,7 +5,6 @@ export const checkRole = (roles) => {
     return (req, res, next) => {
         try {
             const userRole = req.user.role;
-
             console.log(`User Role: ${userRole}`);
 
             // Check if the user's role is included in the allowed roles

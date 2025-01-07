@@ -53,11 +53,6 @@ const userSchema = new mongoose.Schema(
             minlength: 8,
         },
         viewOnly:{type:Boolean,default:true},
-        refreshToken: {
-            type: String,
-            index: true,
-            trim: true,
-        },
         isNdaAgree: {
             type: Boolean,
             default: false,
