@@ -15,6 +15,10 @@ const adminSchema = new mongoose.Schema(
             required: [true, 'First name is required'],
             index: true,
         },
+        phone:{ type: String,
+            required: [true, 'Phone number is required'],
+            index: true
+        },
         lastName: {
             type: String,
             required: [true, 'Last name is required'],
@@ -46,11 +50,6 @@ const adminSchema = new mongoose.Schema(
             index: true,
             trim: true,
             minlength: 8,
-        },
-        refreshToken: {
-            type: String,
-            index: true,
-            trim: true,
         },
         isTermAgree: {
             type: Boolean,

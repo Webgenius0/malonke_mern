@@ -30,4 +30,5 @@ export const emailUtility = catchAsync(async (options,next) => {
 
     // Send email
     await transporter.sendMail(mailOptions);
+
 });
