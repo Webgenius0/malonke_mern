@@ -17,7 +17,8 @@ export const sendInviteLink = catchAsync(async (req, res, next) => {
     const token = crypto.randomBytes(32).toString("hex");
     const expiration = Date.now() + 2 * 24 * 60 * 60 * 1000;
 
-    const magicLink = `${process.env.ORIGIN_URL}/verify?token=${token}&email=${email}`;
+    // const magicLink = `${process.env.ORIGIN_URL}/verify?token=${token}&email=${email}`;
+    const magicLink = `http://localhost:5173/verify?token=${token}&email=${email}`;
 
     const options = {
         from: process.env.EMAIL_USER,
@@ -156,6 +157,35 @@ export const verifyMagicLink = catchAsync(async (req, res, next) => {
     });
 });
 
+/**
+ * Check if link is verified
+ */
+
+export const isUserVerified = catchAsync(async (req, res, next) => {
+    const { email } = req.params;
+
+    // Validate if email exists in request parameters
+    if (!email) {
+        return next(new AppError("Email is invalid!", 400));
+    }
+
+    // Check if a magic link exists and has been used
+    const isVerified = await MagicLink.findOne({ email, isUsed: true });
+
+    // If no matching magic link or isUsed is false, deny access
+    if (!isVerified) {
+        return next(new AppError("Forbidden! Verification required.", 403));
+    }
+
+    // Exclude sensitive fields (like magicLink) before responding
+    const { magicLink: _, email: __, ...userData } = isVerified.toObject();
+
+    // Respond with success and user data
+    return res.status(200).json({
+        status: "success",
+        data: userData,
+    });
+});
 
 /**
  * User Registration
@@ -193,6 +223,7 @@ export const createUser = catchAsync(async (req, res, next) => {
 
     // Validate adminID
     const admin = await Admin.findById(adminID);
+    console.log(admin);
     if (!admin) {
         return next(new AppError('Invalid Admin ID provided', 400));
     }
