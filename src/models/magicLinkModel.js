@@ -3,7 +3,6 @@ import mongoose from 'mongoose';
 const magicLinkSchema = new mongoose.Schema({
         email: {
             type: String,
-            unique: true,
             required: [true, 'Please enter a valid email'],
             index: true,
             trim: true,
@@ -11,7 +10,6 @@ const magicLinkSchema = new mongoose.Schema({
         },
         magicLink: {
             type: String,
-            unique: true,
             required: [true, 'Please enter a magic link'],
             index: true,
             trim: true

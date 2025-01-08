@@ -111,7 +111,7 @@ export const login = catchAsync(async (req, res, next) => {
 //     }
 //
 //     try {
-//         const decodedToken = jwt.verify(incomingRefreshToken, process.env.JWT_SECRET_REFRESH);
+//         const decodedToken = jwt.verify(incomingRefreshToken, process..env.JWT_SECRET_REFRESH);
 //
 //         const user = await User.findById(decodedToken.id);
 //         if (!user) {
