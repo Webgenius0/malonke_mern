@@ -9,15 +9,14 @@ import Admin from "../models/adminModel.js";
  * Generate and Send Magic Link
  */
 export const sendInviteLink = catchAsync(async (req, res, next) => {
-    const {id} = req.user;
-    const {email} = req.body;
+    const { id } = req.user;
+    const { email } = req.body;
 
     if (!email) return next(new AppError("Email is required!", 400));
 
     const token = crypto.randomBytes(32).toString("hex");
     const expiration = Date.now() + 2 * 24 * 60 * 60 * 1000;
 
-    // const magicLink = `${process.env.ORIGIN_URL}/verify?token=${token}&email=${email}`;
     const magicLink = `http://localhost:5173/verify?token=${token}&email=${email}`;
 
     const options = {
@@ -106,20 +105,34 @@ export const sendInviteLink = catchAsync(async (req, res, next) => {
       </body>
     </html>`,
     };
+
+    // Check if the magic link already exists
+    const existingMagicLink = await MagicLink.findOne({ email });
+
+    if (existingMagicLink) {
+        existingMagicLink.magicLink = magicLink;
+        existingMagicLink.isUsed = false;
+        existingMagicLink.adminID = id;
+        existingMagicLink.expiresAt = new Date(expiration);
+        await existingMagicLink.save();
+    } else {
+        await MagicLink.create({
+            email,
+            magicLink,
+            adminID: id,
+            expiresAt: new Date(expiration),
+        });
+    }
+
+    // Send the email for both cases
     await emailUtility(options, next);
-    await MagicLink.create({
-        email,
-        magicLink,
-        adminID: id,
-        expiresAt: new Date(expiration),
-    });
 
     res.status(200).json({
         success: true,
         message: 'Invitation link sent to the provided email.',
     });
+});
 
-})
 
 
 /**
