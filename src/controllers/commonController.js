@@ -3,6 +3,10 @@ import bcrypt from "bcrypt";
 import AppError from "../utils/AppError.js";
 import catchAsync from "../utils/catchAsync.js";
 import {getModelByRole} from "../utils/getModelByRole.js";
+import crypto from 'crypto';
+import OTP from "../models/otpModel.js";
+import {emailUtility} from "../utils/emailUtility.js";
+
 
 // Helper function to generate access and refresh tokens
 const generateAccessToken = (userId, role) => {
@@ -193,7 +197,6 @@ export const changePassword = catchAsync(async (req, res, next) => {
 
 export const checkForRole = catchAsync(async (req, res, next) => {
     const role  = req.params.role;
-    console.log(role);
     let Model;
     try {
         Model = await getModelByRole(role);
@@ -204,8 +207,179 @@ export const checkForRole = catchAsync(async (req, res, next) => {
     const isValid = await Model.findOne({ role });
 
     if (!isValid) {
-        return next(new AppError("Role does not exist or is invalid.", 401));
+        return next(new AppError("User does not exist!", 404));
     }
 
     res.status(200).json({ status: true, role:isValid.role });
+});
+
+/**
+ * Password reset request
+ */
+export const requestPasswordReset = catchAsync(async (req, res, next) => {
+    const {email,role} = req.body;
+    let Model;
+
+    try {
+        Model = await getModelByRole(role);
+    } catch (err) {
+        return next(new AppError('Role not found or error fetching model', 500));
+    }
+
+    const user = await Model.findOne({ email });
+    if (!user) {
+        return next(new AppError("User does not exist!", 404));
+    }
+
+    const otp = crypto.randomBytes(3).toString('hex');
+    const otpExpire = new Date();
+    otpExpire.setMinutes(otpExpire.getMinutes() + 60);
+
+    let otpRecord = await OTP.findOne({ email });
+
+    if (otpRecord) {
+        if (new Date() > otpRecord.otpExpire) {
+            otpRecord.otp = otp;
+            otpRecord.otpExpire = otpExpire;
+            otpRecord.otpVerified = false;
+        } else {
+            return res.status(400).json({ message: 'OTP already sent. Please check your email.' });
+        }
+    } else {
+        otpRecord = new OTP({
+            email,
+            otp,
+            otpExpire,
+        });
+    }
+
+    const options = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: "OTP Verification Code to Complete Your Reset Password Request!",
+        html: `<html>
+          <head>
+          <style>
+          body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+          .container { width: 100%; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+          .header { text-align: center; padding-bottom: 20px; }
+          .header h1 { font-size: 24px; color: #333; }
+          .content { font-size: 16px; color: #555; line-height: 1.6; }
+          .important { color: #d9534f; font-weight: bold; }
+          .link-button { display: inline-block; padding: 12px 20px; background-color: #29ABE2; border-radius: 4px; font-size: 16px; margin-top: 20px; }
+          .link-button:hover { background-color: #255A87; }
+          .footer { text-align: center; font-size: 14px; color: #888; margin-top: 20px; }
+          .footer p { margin: 0; font-weight:500; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Invitation to Complete Your Registration</h1>
+          </div>
+          <div class="content">
+            <p>Hello there,</p>
+            <p>We received a request to reset your password. Please use the OTP code below to verify and complete your reset password request.</p>
+            <p>Your OTP verification code is: <strong>${otp}</strong></p>
+            <p>This OTP is valid for 1 hour. If you did not initiate this request, please ignore this email.</p>
+            <p class="important">Important: Please don't share this verification code with anyone else.</p>
+          </div>
+          <div class="footer">
+            <p>Thank you,</p>
+            <p>The Malonke Team</p>
+          </div>
+        </div>
+      </body>
+    </html>`,
+    };
+
+    try {
+        await emailUtility(options);
+        await otpRecord.save();
+        res.status(200).json({ message: 'OTP sent to your email.' });
+    } catch (error) {
+        return next(new AppError('Error sending OTP email. Please try again.', 500));
+    }
+});
+
+
+/**
+ * Verify Otp
+ */
+export const verifyOTP = catchAsync(async (req, res, next) => {
+    const { email, otp } = req.body;
+
+    const otpRecord = await OTP.findOne({ email });
+
+    if (!otpRecord) {
+        return next(new AppError("OTP not found for this email", 400));
+    }
+
+    if (otpRecord.otpVerified) {
+        return next(new AppError("OTP has already been verified", 400));
+    }
+
+    if (new Date() > otpRecord.otpExpire) {
+        return next(new AppError("OTP has expired, please request a new one", 400));
+    }
+
+    if (otpRecord.otp !== otp) {
+        return next(new AppError("Invalid OTP", 400));
+    }
+
+    otpRecord.otpVerified = true;
+    await otpRecord.save();
+
+    res.status(200).json({ message: "OTP verified successfully" });
+});
+
+
+/**
+ * Reset Password
+ */
+export const resetPassword = catchAsync(async (req, res, next) => {
+    const { email, newPassword,role } = req.body;
+
+    let Model;
+
+    try {
+        Model = await getModelByRole(role);
+    } catch (err) {
+        return next(new AppError('Error getting model by role', 500));
+    }
+
+    // Step 1: Find user by email
+    const user = await Model.findOne({ email });
+    if (!user) {
+        return next(new AppError("User not found!", 404));
+    }
+
+    // Step 2: Find OTP record for the email
+    const otpRecord = await OTP.findOne({ email });
+    if (!otpRecord) {
+        return next(new AppError("No OTP found for this email. Please request a new OTP.", 400));
+    }
+
+    // Step 3: Check if OTP is already verified
+    if (otpRecord.otpVerified) {
+        return next(new AppError("OTP has already been verified", 400));
+    }
+
+    // Step 4: Check if OTP is expired
+    if (new Date() > otpRecord.otpExpire) {
+        return next(new AppError("OTP has expired, please request a new one.", 400));
+    }
+
+    // Step 5: Validate the OTP entered by the user
+    if (otpRecord.otp !== otp) {
+        return next(new AppError("Invalid OTP", 400));
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    // Remove OTP record after password reset
+    await OTP.findOneAndDelete({ email });
+
+    res.status(200).json({ message: "Password reset successfully" });
 });
