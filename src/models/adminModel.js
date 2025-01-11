@@ -65,6 +65,7 @@ const adminSchema = new mongoose.Schema(
     { timestamps: true, versionKey: false }
 );
 
+
 // Apply the password hashing pre-save hook and the comparePassword method
 adminSchema.pre("save", preSaveHook);
 adminSchema.methods.comparePassword = comparePassword;

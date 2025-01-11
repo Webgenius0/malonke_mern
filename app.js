@@ -7,12 +7,19 @@ import mongoSanitize from "express-mongo-sanitize";
 import rateLimit from "express-rate-limit";
 import morgan from "morgan";
 import dotenv from "dotenv";
+import fileUpload from "express-fileupload";
 import AppError from "./src/utils/AppError.js";
 import userRoutes from "./src/routes/userRoutes.js";
 import connectDB from "./src/db/connectDB.js";
 import superAdminRoutes from "./src/routes/superAdminRoutes.js";
 import commonRoutes from "./src/routes/commonRoutes.js";
 import adminRoutes from "./src/routes/adminRoutes.js";
+import reviewRoutes from "./src/routes/reviewRoutes.js";
+import featurePlanRoutes from "./src/routes/featurePlanRoutes.js"
+import contactRoutes from "./src/routes/contactRoutes.js";
+import profileRoutes from "./src/routes/profileRoutes.js";
+import faqRoutes from "./src/routes/FAQRoutes.js";
+import articleRoutes from "./src/routes/articleRoutes.js"
 import keyFeatureRoutes from "./src/routes/keyFeatureRoutes.js";
 
 dotenv.config();
@@ -29,6 +36,7 @@ const limiter = rateLimit({
 });
 
 // Middleware
+
 app.use(morgan("dev"));
 app.use(cors({
     origin:"*",
@@ -42,6 +50,7 @@ app.use(helmet());
 app.use(mongoSanitize());
 app.use(limiter);
 app.use(cookieParser());
+app.use(fileUpload());
 
 // Root route
 app.get("/", (req, res) => {
@@ -58,6 +67,12 @@ app.use("/api/v1/superAdmin",superAdminRoutes);
 app.use("/api/v1/admin",adminRoutes);
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/common", commonRoutes);
+app.use("/api/v1/profile", profileRoutes);
+app.use("/api/v1/faqs", faqRoutes);
+app.use("/api/v1/contact", contactRoutes);
+app.use("/api/v1/reviews", reviewRoutes);
+app.use("/api/v1/features", featurePlanRoutes);
+app.use("/api/v1/articles", articleRoutes);
 app.use("/api/v1/keyFeatures", keyFeatureRoutes);
 
 // Handle undefined routes
