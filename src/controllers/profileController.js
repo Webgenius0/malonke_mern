@@ -27,7 +27,7 @@ export const createOrUpdateProfile = async (req, res) => {
       birthState,
     } = req.body;
 
-    const userID = "677374fe3a118f9b68893c50";
+    const userID = req.user.id;
     let avatarUrl = "";
 
     // Handle file upload if avatar is provided
@@ -37,7 +37,9 @@ export const createOrUpdateProfile = async (req, res) => {
       const validExtensions = ["jpeg", "jpg", "png"];
 
       if (!validExtensions.includes(fileExtension.toLowerCase())) {
-        return res.status(400).json({ message: "Invalid file type for avatar" });
+        return res
+          .status(400)
+          .json({ message: "Invalid file type for avatar" });
       }
 
       const fileName = `${userID}-avatar.${fileExtension}`;
@@ -63,7 +65,7 @@ export const createOrUpdateProfile = async (req, res) => {
       const updatedProfile = await Profile.findByIdAndUpdate(
         existingProfile._id,
         {
-          avatar: avatarUrl, 
+          avatar: avatarUrl,
           address,
           city,
           state,
