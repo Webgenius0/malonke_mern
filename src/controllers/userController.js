@@ -17,7 +17,7 @@ export const sendInviteLink = catchAsync(async (req, res, next) => {
     const token = crypto.randomBytes(32).toString("hex");
     const expiration = Date.now() + 2 * 24 * 60 * 60 * 1000;
 
-    const magicLink = `http://localhost:5173/verify?token=${token}&email=${email}`;
+    const magicLink = `https://malonke.netlify.app/verify?token=${token}&email=${email}`;
 
     const options = {
         from: process.env.EMAIL_USER,
@@ -146,11 +146,8 @@ export const verifyMagicLink = catchAsync(async (req, res, next) => {
         return next(new AppError("Email and Magic Link are required!", 400));
     }
 
-    const isValid = await MagicLink.findOne({ email, magicLink });
+    const isValid = await MagicLink.findOne({ email});
 
-    if (!isValid) {
-        return next(new AppError("Magic Link or email is invalid!", 400));
-    }
 
     if (isValid.expiresAt < Date.now()) {
         return next(new AppError("Magic Link has expired!", 400));

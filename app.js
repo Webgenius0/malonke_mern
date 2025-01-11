@@ -13,6 +13,7 @@ import connectDB from "./src/db/connectDB.js";
 import superAdminRoutes from "./src/routes/superAdminRoutes.js";
 import commonRoutes from "./src/routes/commonRoutes.js";
 import adminRoutes from "./src/routes/adminRoutes.js";
+import keyFeatureRoutes from "./src/routes/keyFeatureRoutes.js";
 
 dotenv.config();
 
@@ -30,7 +31,7 @@ const limiter = rateLimit({
 // Middleware
 app.use(morgan("dev"));
 app.use(cors({
-    origin:"http://localhost:5173" || process.env.ORIGIN_URL,
+    origin:"*",
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
 }));
@@ -57,6 +58,7 @@ app.use("/api/v1/superAdmin",superAdminRoutes);
 app.use("/api/v1/admin",adminRoutes);
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/common", commonRoutes);
+app.use("/api/v1/keyFeatures", keyFeatureRoutes);
 
 // Handle undefined routes
 app.all("*", (req, res, next) => {
