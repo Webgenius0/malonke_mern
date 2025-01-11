@@ -1,7 +1,6 @@
 import catchAsync from "../utils/catchAsync.js";
 import AppError from "../utils/AppError.js";
 import Admin from "../models/adminModel.js";
-import bcrypt from "bcrypt";
 import {emailUtility} from "../utils/emailUtility.js";
 
 

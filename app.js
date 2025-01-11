@@ -20,6 +20,7 @@ import contactRoutes from "./src/routes/contactRoutes.js";
 import profileRoutes from "./src/routes/profileRoutes.js";
 import faqRoutes from "./src/routes/FAQRoutes.js";
 import articleRoutes from "./src/routes/articleRoutes.js"
+import keyFeatureRoutes from "./src/routes/keyFeatureRoutes.js";
 
 dotenv.config();
 
@@ -38,7 +39,7 @@ const limiter = rateLimit({
 
 app.use(morgan("dev"));
 app.use(cors({
-    origin:"http://localhost:5173" || process.env.ORIGIN_URL,
+    origin:"*",
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
 }));
@@ -72,6 +73,7 @@ app.use("/api/v1/contact", contactRoutes);
 app.use("/api/v1/reviews", reviewRoutes);
 app.use("/api/v1/features", featurePlanRoutes);
 app.use("/api/v1/articles", articleRoutes);
+app.use("/api/v1/keyFeatures", keyFeatureRoutes);
 
 // Handle undefined routes
 app.all("*", (req, res, next) => {
