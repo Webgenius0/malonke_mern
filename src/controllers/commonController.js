@@ -2,81 +2,89 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import AppError from "../utils/AppError.js";
 import catchAsync from "../utils/catchAsync.js";
-import {getModelByRole} from "../utils/getModelByRole.js";
-import crypto from 'crypto';
+import { getModelByRole } from "../utils/getModelByRole.js";
+import crypto from "crypto";
 import OTP from "../models/otpModel.js";
-import {emailUtility} from "../utils/emailUtility.js";
-
+import { emailUtility } from "../utils/emailUtility.js";
 
 // Helper function to generate access and refresh tokens
 const generateAccessToken = (userId, role) => {
-    return jwt.sign({ id: userId, role }, process.env.JWT_SECRET_ACCESS, { expiresIn: process.env.JWT_ACCESS_EXPIRES_IN });
+  return jwt.sign({ id: userId, role }, process.env.JWT_SECRET_ACCESS, {
+    expiresIn: process.env.JWT_ACCESS_EXPIRES_IN,
+  });
 };
-
 
 /**
  * Login Controller
  */
 export const login = catchAsync(async (req, res, next) => {
-    const { identifier, password, role } = req.body;
+  const { identifier, password, role } = req.body;
 
-    // Validate input
-    if (!identifier || !password || !role) {
-        return next(new AppError("Identifier, password, and role are required", 400));
-    }
+  // Validate input
+  if (!identifier || !password || !role) {
+    return next(
+      new AppError("Identifier, password, and role are required", 400)
+    );
+  }
 
+  // Get model based on role
+  let Model;
+  try {
+    Model = await getModelByRole(role);
+  } catch (err) {
+    return next(err);
+  }
 
-    // Get model based on role
-    let Model;
-    try {
-        Model = await getModelByRole(role);
-    } catch (err) {
-        return next(err);
-    }
+  // Find user by email or username
+  const user = await Model.findOne({
+    $or: [{ email: identifier }, { username: identifier }],
+  }).select("+password +refreshToken");
 
-    // Find user by email or username
-    const user = await Model.findOne({$or: [{ email: identifier }, { username: identifier }]}).select("+password +refreshToken");
+  if (!user) {
+    return next(
+      new AppError(
+        `No user found with the provided identifier: ${identifier}`,
+        401
+      )
+    );
+  }
 
+  // Validate the current password (compare plain text password with stored hash)
+  const isPasswordCorrect = await bcrypt.compare(
+    password.trim(),
+    user.password
+  );
+  console.log(isPasswordCorrect);
+  console.log("Provided password (plain text):", password);
+  console.log("Stored hashed password:", user.password);
 
-    if (!user) {
-        return next(new AppError(`No user found with the provided identifier: ${identifier}`, 401));
-    }
+  if (!isPasswordCorrect) {
+    return next(new AppError("Incorrect current password", 401));
+  }
 
-    // Validate the current password (compare plain text password with stored hash)
-    const isPasswordCorrect = await bcrypt.compare(password.trim(), user.password);
-    console.log(isPasswordCorrect);
-    console.log('Provided password (plain text):', password);
-    console.log('Stored hashed password:', user.password);
+  // Generate access and refresh tokens
+  const token = generateAccessToken(user._id, role);
+  await user.save();
 
-    if (!isPasswordCorrect) {
-        return next(new AppError("Incorrect current password", 401));
-    }
+  // Set access token as HTTP-only cookie
+  res.cookie("token", token, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "strict",
+    maxAge: 3600 * 1000,
+  });
 
-    // Generate access and refresh tokens
-    const token = generateAccessToken(user._id, role);
-    await user.save();
+  // Remove sensitive data from the response
+  const { password: _, refreshToken: __, ...userData } = user.toObject();
 
-    // Set access token as HTTP-only cookie
-    res.cookie("token", token, {
-        httpOnly: true,
-        secure: false,
-        sameSite: "strict",
-        maxAge: 3600 * 1000,
-    });
-
-    // Remove sensitive data from the response
-    const { password: _, refreshToken: __, ...userData } = user.toObject();
-
-    // Send response
-    res.status(200).json({
-        status: "success",
-        message: "Logged in successfully",
-        user: userData,
-        token
-    });
+  // Send response
+  res.status(200).json({
+    status: "success",
+    message: "Logged in successfully",
+    user: userData,
+    token,
+  });
 });
-
-
 
 // /**
 //  * Refresh Token Controller
@@ -140,124 +148,123 @@ export const login = catchAsync(async (req, res, next) => {
 //     }
 // };
 
-
-
 /**
  * Change Password Controller
  */
 export const changePassword = catchAsync(async (req, res, next) => {
-    const { id, role } = req.user;
-    const { oldPassword, newPassword, confirmPassword } = req.body;
+  const { id, role } = req.user;
+  const { oldPassword, newPassword, confirmPassword } = req.body;
 
-    // Validate required fields
-    if (!oldPassword || !newPassword || !confirmPassword) {
-        return next(new AppError("All fields (oldPassword, newPassword, confirmPassword) are required.", 400));
-    }
+  // Validate required fields
+  if (!oldPassword || !newPassword || !confirmPassword) {
+    return next(
+      new AppError(
+        "All fields (oldPassword, newPassword, confirmPassword) are required.",
+        400
+      )
+    );
+  }
 
-    // Validate password confirmation
-    if (newPassword !== confirmPassword) {
-        return next(new AppError("New password and confirm password do not match.", 400));
-    }
+  // Validate password confirmation
+  if (newPassword !== confirmPassword) {
+    return next(
+      new AppError("New password and confirm password do not match.", 400)
+    );
+  }
 
-    // Get model based on role
-    let Model;
-    try {
-        Model = await getModelByRole(role);
-    } catch (err) {
-        return next(err);
-    }
+  // Get model based on role
+  let Model;
+  try {
+    Model = await getModelByRole(role);
+  } catch (err) {
+    return next(err);
+  }
 
-    // Fetch user by ID
-    const user = await Model.findById(id);
-    if (!user) {
-        return next(new AppError("User does not exist.", 404));
-    }
+  // Fetch user by ID
+  const user = await Model.findById(id);
+  if (!user) {
+    return next(new AppError("User does not exist.", 404));
+  }
 
-    // Verify old password
-    const isMatch = await bcrypt.compare(oldPassword, user.password);
-    if (!isMatch) {
-        return next(new AppError("Old password is incorrect.", 401));
-    }
+  // Verify old password
+  const isMatch = await bcrypt.compare(oldPassword, user.password);
+  if (!isMatch) {
+    return next(new AppError("Old password is incorrect.", 401));
+  }
 
-    // Hash new password and update
-    user.password = newPassword;
-    await user.save();
+  // Hash new password and update
+  user.password = newPassword;
+  await user.save();
 
-    // Success response
-    res.status(200).json({
-        success: true,
-        message: "Password changed successfully.",
-    });
+  // Success response
+  res.status(200).json({
+    success: true,
+    message: "Password changed successfully.",
+  });
 });
-
 
 /**
  * Check for Role
  */
-
 export const checkForRole = catchAsync(async (req, res, next) => {
-    const role  = req.params.role;
-    let Model;
-    try {
-        Model = await getModelByRole(role);
-    } catch (err) {
-        return next(new AppError('Error getting model by role', 500));
-    }
+  const role = req.params.role;
+  let Model;
+  try {
+    Model = await getModelByRole(role);
+  } catch (err) {
+    return next(new AppError("Error getting model by role", 500));
+  }
 
-    const isValid = await Model.findOne({ role });
+  const isValid = await Model.findOne({ role });
 
-    if (!isValid) {
-        return next(new AppError("User does not exist!", 404));
-    }
+  if (!isValid) {
+    return next(new AppError("User does not exist!", 404));
+  }
 
-    res.status(200).json({ status: true, role:isValid.role });
+  res.status(200).json({ status: true, role: isValid.role });
 });
 
 /**
  * Password reset request
  */
 export const requestPasswordReset = catchAsync(async (req, res, next) => {
-    const {email,role} = req.body;
-    let Model;
+  const { email, role } = req.body;
+  let Model;
 
-    try {
-        Model = await getModelByRole(role);
-    } catch (err) {
-        return next(new AppError('Role not found or error fetching model', 500));
-    }
+  try {
+    Model = await getModelByRole(role);
+  } catch (err) {
+    return next(new AppError("Role not found or error fetching model", 500));
+  }
 
-    const user = await Model.findOne({ email });
-    if (!user) {
-        return next(new AppError("User does not exist!", 404));
-    }
+  const user = await Model.findOne({ email });
+  if (!user) {
+    return next(new AppError("User does not exist!", 404));
+  }
 
-    const otp = crypto.randomBytes(3).toString('hex');
-    const otpExpire = new Date();
-    otpExpire.setMinutes(otpExpire.getMinutes() + 60);
+  const otp = crypto.randomBytes(3).toString("hex");
+  const otpExpire = new Date();
+  otpExpire.setMinutes(otpExpire.getMinutes() + 60);
 
-    let otpRecord = await OTP.findOne({ email });
+  let otpRecord = await OTP.findOne({ email });
 
-    if (otpRecord) {
-        if (new Date() > otpRecord.otpExpire) {
-            otpRecord.otp = otp;
-            otpRecord.otpExpire = otpExpire;
-            otpRecord.otpVerified = false;
-        } else {
-            return res.status(400).json({ message: 'OTP already sent. Please check your email.' });
-        }
-    } else {
-        otpRecord = new OTP({
-            email,
-            otp,
-            otpExpire,
-        });
-    }
+  if (otpRecord) {
+    otpRecord.otp = otp;
+    otpRecord.otpExpire = otpExpire;
+    otpRecord.otpVerified = false;
+  } else {
+    otpRecord = new OTP({
+      email,
+      otp,
+      otpExpire,
+    });
+  }
 
-    const options = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: "OTP Verification Code to Complete Your Reset Password Request!",
-        html: `<html>
+  const options = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: "OTP Verification Code to Complete Your Reset Password Request!",
+    html: `<html>
           <head>
           <style>
           body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
@@ -291,95 +298,100 @@ export const requestPasswordReset = catchAsync(async (req, res, next) => {
         </div>
       </body>
     </html>`,
-    };
+  };
 
-    try {
-        await emailUtility(options);
-        await otpRecord.save();
-        res.status(200).json({ message: 'OTP sent to your email.' });
-    } catch (error) {
-        return next(new AppError('Error sending OTP email. Please try again.', 500));
-    }
+  try {
+    await emailUtility(options);
+    await otpRecord.save();
+    res.status(200).json({ message: "OTP sent to your email." });
+  } catch (error) {
+    return next(
+      new AppError("Error sending OTP email. Please try again.", 500)
+    );
+  }
 });
-
 
 /**
  * Verify Otp
  */
 export const verifyOTP = catchAsync(async (req, res, next) => {
-    const { email, otp } = req.body;
+  const { email, otp } = req.body;
 
-    const otpRecord = await OTP.findOne({ email });
+  const otpRecord = await OTP.findOne({ email });
 
-    if (!otpRecord) {
-        return next(new AppError("OTP not found for this email", 400));
-    }
+  if (!otpRecord) {
+    return next(new AppError("OTP not found for this email", 400));
+  }
 
-    if (otpRecord.otpVerified) {
-        return next(new AppError("OTP has already been verified", 400));
-    }
+  if (otpRecord.otpVerified) {
+    return next(new AppError("OTP has already been verified", 400));
+  }
 
-    if (new Date() > otpRecord.otpExpire) {
-        return next(new AppError("OTP has expired, please request a new one", 400));
-    }
+  if (new Date() > otpRecord.otpExpire) {
+    return next(new AppError("OTP has expired, please request a new one", 400));
+  }
 
-    if (otpRecord.otp !== otp) {
-        return next(new AppError("Invalid OTP", 400));
-    }
+  if (otpRecord.otp !== otp) {
+    return next(new AppError("Invalid OTP", 400));
+  }
 
-    otpRecord.otpVerified = true;
-    await otpRecord.save();
+  otpRecord.otpVerified = true;
+  await otpRecord.save();
 
-    res.status(200).json({ message: "OTP verified successfully" });
+  res.status(200).json({ message: "OTP verified successfully" });
 });
-
 
 /**
  * Reset Password
  */
 export const resetPassword = catchAsync(async (req, res, next) => {
-    const { email, newPassword,role } = req.body;
+  const { email, newPassword, role } = req.body;
 
-    let Model;
+  let Model;
 
-    try {
-        Model = await getModelByRole(role);
-    } catch (err) {
-        return next(new AppError('Error getting model by role', 500));
-    }
+  try {
+    Model = await getModelByRole(role);
+  } catch (err) {
+    return next(new AppError("Error getting model by role", 500));
+  }
 
-    // Step 1: Find user by email
-    const user = await Model.findOne({ email });
-    if (!user) {
-        return next(new AppError("User not found!", 404));
-    }
+  // Step 1: Find user by email
+  const user = await Model.findOne({ email });
+  if (!user) {
+    return next(new AppError("User not found!", 404));
+  }
 
-    // Step 2: Find OTP record for the email
-    const otpRecord = await OTP.findOne({ email });
-    if (!otpRecord) {
-        return next(new AppError("No OTP found for this email. Please request a new OTP.", 400));
-    }
+  // Step 2: Find OTP record for the email
+  const otpRecord = await OTP.findOne({ email });
+  if (!otpRecord) {
+    return next(
+      new AppError(
+        "No OTP found for this email. Please request a new OTP.",
+        400
+      )
+    );
+  }
 
     // Step 3: Check if OTP is already verified
-    if (otpRecord.otpVerified) {
-        return next(new AppError("OTP has already been verified", 400));
+    if (otpRecord.otpVerified === false) {
+        return next(new AppError("Verify your account first!", 400));
     }
 
-    // Step 4: Check if OTP is expired
-    if (new Date() > otpRecord.otpExpire) {
-        return next(new AppError("OTP has expired, please request a new one.", 400));
-    }
+  // Step 4: Check if OTP is expired
+  if (new Date() > otpRecord.otpExpire) {
+    return next(
+      new AppError("OTP has expired, please request a new one.", 400)
+    );
+  }
 
-    // Step 5: Validate the OTP entered by the user
-    if (otpRecord.otp !== otp) {
-        return next(new AppError("Invalid OTP", 400));
-    }
+  user.password = newPassword;
+  await user.save();
 
-    user.password = newPassword;
-    await user.save();
-
-    // Remove OTP record after password reset
-    await OTP.findOneAndDelete({ email });
-
-    res.status(200).json({ message: "Password reset successfully" });
+  try {
+    await OTP.deleteOne({ email: email.toLowerCase() });
+  } catch (err) {
+    console.error("Error deleting OTP record:", err);
+  }
+  
+  res.status(200).json({ message: "Password reset successfully" });
 });
