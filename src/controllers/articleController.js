@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import Article from "../models/articleModel.js";
+import User from "../models/userModel.js";
 
 // Define __dirname manually for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -16,11 +17,11 @@ const convertImageToBase64 = (filePath) => {
 // Create article
 export const createArticle = async (req, res) => {
   try {
-    const { title, description } = req.body;
-    const userID = "67811b2e3cc1346af57fd510" || req.user.id;
+    const { title, description, category } = req.body;
+    const userID = req.user.id;
     let imgUrl = "";
 
-    if (!title || !description) {
+    if (!title || !description || !category) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
@@ -47,6 +48,7 @@ export const createArticle = async (req, res) => {
       userID,
       title,
       description,
+      category,
       image: imgUrl,
     });
 
@@ -102,7 +104,7 @@ export const updateArticle = async (req, res) => {
 
     article.title = title;
     article.description = description;
-    article.image = imgUrl || article.image; // Update image only if new one is provided
+    article.image = imgUrl || article.image;
 
     await article.save();
 
@@ -142,15 +144,41 @@ export const getArticle = async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Find the article by ID
     const article = await Article.findById(id);
 
     if (!article) {
       return res.status(404).json({ message: "Article not found" });
     }
 
-    return res
-      .status(200)
-      .json({ message: "Article retrieved successfully", article });
+    // Aggregate to fetch user details based on the userID from the article
+    const userAggregation = await User.aggregate([
+      {
+        $match: { _id: article.userID },
+      },
+      {
+        $project: {
+          _id: 0, // Exclude _id from the result
+          firstName: 1,
+          lastName: 1, // Include only firstName and lastName
+        },
+      },
+    ]);
+
+    if (!userAggregation.length) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const data = {
+      article,
+      user: userAggregation[0],
+    };
+
+    // Return the article and the user's firstName and lastName
+    return res.status(200).json({
+      message: "Article and User retrieved successfully",
+      data,
+    });
   } catch (error) {
     console.error(error);
     return res

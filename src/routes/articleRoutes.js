@@ -6,14 +6,14 @@ import {
   getArticles,
   updateArticle,
 } from "../controllers/articleController.js";
-// import verifyToken from "../middlewares/verifyToken.js";
+import verifyToken from "../middlewares/verifyToken.js";
 // import {checkRole} from "../middlewares/checkRole.js";
 const router = express.Router();
 
-router.post("/", createArticle);
+router.post("/", verifyToken, createArticle);
 router.get("/", getArticles);
 router.get("/:id", getArticle);
-router.put("/:id", updateArticle);
-router.delete("/:id", deleteArticle);
+router.put("/:id", verifyToken, updateArticle);
+router.delete("/:id", verifyToken, deleteArticle);
 
 export default router;
