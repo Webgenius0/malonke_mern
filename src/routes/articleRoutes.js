@@ -4,6 +4,9 @@ import {
   deleteArticle,
   getArticle,
   getArticles,
+  getLatestArticles,
+  getRelatedArticles,
+  getUserArticles,
   updateArticle,
 } from "../controllers/articleController.js";
 import verifyToken from "../middlewares/verifyToken.js";
@@ -12,7 +15,10 @@ const router = express.Router();
 
 router.post("/", verifyToken, createArticle);
 router.get("/", getArticles);
+router.get("/latest", getLatestArticles);
 router.get("/:id", getArticle);
+router.get("/related/:id", getRelatedArticles);
+router.get("/user/:id", getUserArticles);
 router.put("/:id", verifyToken, updateArticle);
 router.delete("/:id", verifyToken, deleteArticle);
 
