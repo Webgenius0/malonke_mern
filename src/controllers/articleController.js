@@ -3,6 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import Article from "../models/articleModel.js";
 import User from "../models/userModel.js";
+import mongoose from "mongoose";
 
 // Define __dirname manually for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -144,6 +145,11 @@ export const getArticle = async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Validate ID format
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid article ID format" });
+    }
+
     // Find the article by ID
     const article = await Article.findById(id);
 
@@ -151,30 +157,55 @@ export const getArticle = async (req, res) => {
       return res.status(404).json({ message: "Article not found" });
     }
 
-    // Aggregate to fetch user details based on the userID from the article
-    const userAggregation = await User.aggregate([
+    // Batch aggregations using $lookup
+    const [userData] = await User.aggregate([
+      { $match: { _id: article.userID } },
       {
-        $match: { _id: article.userID },
+        $lookup: {
+          from: "profiles",
+          localField: "_id",
+          foreignField: "_id",
+          as: "profile",
+        },
+      },
+      {
+        $lookup: {
+          from: "admins",
+          localField: "adminID",
+          foreignField: "_id",
+          as: "admin",
+        },
       },
       {
         $project: {
-          _id: 0, // Exclude _id from the result
           firstName: 1,
-          lastName: 1, // Include only firstName and lastName
+          lastName: 1,
+          "profile.avatar": 1,
+          "admin.firstName": 1,
+          "admin.lastName": 1,
         },
       },
     ]);
 
-    if (!userAggregation.length) {
+    if (!userData) {
       return res.status(404).json({ message: "User not found" });
     }
 
+    const username = `${userData.firstName || ""} ${
+      userData.lastName || ""
+    }`.trim();
+    const avatar = userData.profile?.[0]?.avatar || "";
+    const adminName = `${userData.admin?.[0]?.firstName || ""} ${
+      userData.admin?.[0]?.lastName || ""
+    }`.trim();
+
     const data = {
       article,
-      user: userAggregation[0],
+      username,
+      adminName,
+      avatar,
     };
 
-    // Return the article and the user's firstName and lastName
     return res.status(200).json({
       message: "Article and User retrieved successfully",
       data,
@@ -204,5 +235,101 @@ export const deleteArticle = async (req, res) => {
     return res
       .status(500)
       .json({ message: "An error occurred", error: error.message });
+  }
+};
+
+// Related article
+export const getRelatedArticles = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Validate ID format
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid article ID format" });
+    }
+
+    // Find the target article
+    const targetArticle = await Article.findById(id);
+
+    if (!targetArticle) {
+      return res.status(404).json({ message: "Article not found" });
+    }
+
+    // Find related articles in the same category, excluding the target article
+    const { category } = targetArticle;
+    const relatedArticles = await Article.find({
+      category: category,
+      _id: { $ne: id }, // Exclude the target article
+    })
+      .limit(5) // Limit to 5 related articles
+      .sort({ createdAt: -1 }) // Sort by latest
+      .exec();
+
+    // Respond with the related articles
+    return res.status(200).json({
+      message: "Related articles retrieved successfully",
+      relatedArticles,
+    });
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ message: "An error occurred", error: error.message });
+  }
+};
+
+// Latest artiles
+export const getLatestArticles = async (req, res) => {
+  try {
+    // Find the latest article by sorting createdAt in descending order
+    const latestArticle = await Article.find()
+      .sort({ createdAt: -1 })
+      .exec();
+
+    if (!latestArticle) {
+      return res.status(404).json({ message: "No articles found" });
+    }
+
+    // Return the latest article
+    return res.status(200).json({
+      message: "Latest article retrieved successfully",
+      article: latestArticle,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "An error occurred while retrieving the latest article",
+      error: error.message,
+    });
+  }
+};
+
+// Get user all articles
+export const getUserArticles = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find all articles by the user
+    const userArticles = await Article.find({ userID: id })
+      .sort({ createdAt: -1 })
+      .exec();
+
+    if (!userArticles.length) {
+      return res
+        .status(404)
+        .json({ message: "No articles found for this user" });
+    }
+
+    // Return the user's articles
+    return res.status(200).json({
+      message: "User articles retrieved successfully",
+      articles: userArticles,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "An error occurred while retrieving user articles",
+      error: error.message,
+    });
   }
 };
