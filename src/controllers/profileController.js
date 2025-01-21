@@ -1,22 +1,11 @@
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
 import Profile from "../models/profileModel.js";
-
-// Define __dirname manually for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Function to convert image file to Base64
-const convertImageToBase64 = (filePath) => {
-  const imageData = fs.readFileSync(filePath);
-  return imageData.toString("base64");
-};
 
 // POST Route to create or update a profile
 export const createOrUpdateProfile = async (req, res) => {
   try {
+    const userID = req.user.id;
     const {
+      avatar,
       address,
       city,
       state,
@@ -27,45 +16,15 @@ export const createOrUpdateProfile = async (req, res) => {
       birthState,
     } = req.body;
 
-    const userID = req.user.id;
-    let avatarUrl = "";
-
-    // Handle file upload if avatar is provided
-    if (req.files && req.files.avatar) {
-      const avatarFile = req.files.avatar;
-      const fileExtension = avatarFile.name.split(".").pop();
-      const validExtensions = ["jpeg", "jpg", "png"];
-
-      if (!validExtensions.includes(fileExtension.toLowerCase())) {
-        return res
-          .status(400)
-          .json({ message: "Invalid file type for avatar" });
-      }
-
-      const fileName = `${userID}-avatar.${fileExtension}`;
-      const filePath = path.join(__dirname, "../../public/uploads", fileName);
-
-      avatarFile.mv(filePath, (err) => {
-        if (err) {
-          return res
-            .status(500)
-            .json({ message: "Error saving file", error: err.message });
-        }
-      });
-
-      const base64Image = convertImageToBase64(filePath);
-      avatarUrl = `data:image/${fileExtension};base64,${base64Image}`;
-    }
-
     // Find an existing profile by userID
     const existingProfile = await Profile.findOne({ userID });
 
     if (existingProfile) {
       // Update the profile if it exists
       const updatedProfile = await Profile.findByIdAndUpdate(
-        existingProfile._id,
+        existingProfile?._id,
         {
-          avatar: avatarUrl,
+          avatar,
           address,
           city,
           state,
@@ -86,7 +45,7 @@ export const createOrUpdateProfile = async (req, res) => {
     // Create a new profile if none exists
     const newProfile = new Profile({
       userID,
-      avatar: avatarUrl,
+      avatar,
       address,
       city,
       state,

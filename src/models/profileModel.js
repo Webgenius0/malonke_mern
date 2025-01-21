@@ -12,12 +12,10 @@ const profileSchema = new Schema(
     },
     avatar: {
       type: String,
-      validate: {
-        // Allow either an empty string or a valid Base64 image string
-        validator: (v) => v === "" || /^data:image\/[a-z]+;base64,/.test(v),
-        message: "Invalid avatar format. Use a Base64 string.",
-      },
-      default: "",
+      index: true,
+      trim: true,
+      default:
+        "https://coenterprises.com.au/wp-content/uploads/2018/02/male-placeholder-image.jpeg",
     },
     address: {
       type: String,
