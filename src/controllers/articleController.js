@@ -102,7 +102,7 @@ export const updateArticle = async (req, res) => {
 
     article.title = title;
     article.description = description;
-    article.image = imgUrl || article.image; // Update image only if new one is provided
+    article.image = imgUrl || article.image;
 
     await article.save();
 

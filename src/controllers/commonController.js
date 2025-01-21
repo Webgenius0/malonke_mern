@@ -282,7 +282,7 @@ export const requestPasswordReset = catchAsync(async (req, res, next) => {
       <body>
         <div class="container">
           <div class="header">
-            <h1>Invitation to Complete Your Registration</h1>
+            <h1>Invitation to Complete Your Reset Password Request</h1>
           </div>
           <div class="content">
             <p>Hello there,</p>
