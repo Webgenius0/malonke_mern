@@ -43,8 +43,8 @@ app.use(cors({
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({limit:"50Mb"}));
+app.use(express.urlencoded({ limit:"50Mb",extended: true }));
 app.use(hpp());
 app.use(helmet());
 app.use(mongoSanitize());
