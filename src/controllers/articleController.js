@@ -1,56 +1,55 @@
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+// import fs from "fs";
+// import path from "path";
+// import { fileURLToPath } from "url";
 import Article from "../models/articleModel.js";
 import User from "../models/userModel.js";
 import mongoose from "mongoose";
 
 // Define __dirname manually for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// const __filename = fileURLToPath(import.meta.url);
+// const __dirname = path.dirname(__filename);
 
 // Function to convert image file to Base64
-const convertImageToBase64 = (filePath) => {
-  const imageData = fs.readFileSync(filePath);
-  return imageData.toString("base64");
-};
+// const convertImageToBase64 = (filePath) => {
+//   const imageData = fs.readFileSync(filePath);
+//   return imageData.toString("base64");
+// };
 
 // Create article
 export const createArticle = async (req, res) => {
   try {
-    const { title, description, category } = req.body;
+    const { title, description, category, image } = req.body;
     const userID = req.user.id;
-    let imgUrl = "";
 
-    if (!title || !description || !category) {
+    if (!title || !description || !category || !image) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
     // Handle file upload if avatar is provided
-    if (req.files && req.files.image) {
-      const imageFile = req.files.image;
-      const fileExtension = imageFile.name.split(".").pop();
-      const validExtensions = ["jpeg", "jpg", "png"];
+    // if (req.files && req.files.image) {
+    //   const imageFile = req.files.image;
+    //   const fileExtension = imageFile.name.split(".").pop();
+    //   const validExtensions = ["jpeg", "jpg", "png"];
 
-      if (!validExtensions.includes(fileExtension.toLowerCase())) {
-        return res.status(400).json({ message: "Invalid file type for image" });
-      }
+    //   if (!validExtensions.includes(fileExtension.toLowerCase())) {
+    //     return res.status(400).json({ message: "Invalid file type for image" });
+    //   }
 
-      const fileName = `${userID}-image.${fileExtension}`;
-      const filePath = path.join(__dirname, "../../public/uploads", fileName);
+    //   const fileName = `${userID}-image.${fileExtension}`;
+    //   const filePath = path.join(__dirname, "../../public/uploads", fileName);
 
-      await imageFile.mv(filePath);
+    //   await imageFile.mv(filePath);
 
-      const base64Image = convertImageToBase64(filePath);
-      imgUrl = `data:image/${fileExtension};base64,${base64Image}`;
-    }
+    //   const base64Image = convertImageToBase64(filePath);
+    //   imgUrl = `data:image/${fileExtension};base64,${base64Image}`;
+    // }
 
     const newArticle = new Article({
       userID,
       title,
       description,
       category,
-      image: imgUrl,
+      image,
     });
 
     await newArticle.save();
@@ -69,14 +68,9 @@ export const createArticle = async (req, res) => {
 // Update article
 export const updateArticle = async (req, res) => {
   try {
-    const { title, description } = req.body;
-    const userID = "67811b2e3cc1346af57fd510" || req.user.id;
+    const { title, description, image } = req.body;
+    const userID = req.user.id;
     const { id } = req.params;
-    let imgUrl = "";
-
-    if (!title || !description) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
 
     const article = await Article.findById(id);
 
@@ -85,27 +79,27 @@ export const updateArticle = async (req, res) => {
     }
 
     // Handle file upload if image is provided
-    if (req.files && req.files.image) {
-      const imageFile = req.files.image;
-      const fileExtension = imageFile.name.split(".").pop();
-      const validExtensions = ["jpeg", "jpg", "png"];
+    // if (req.files && req.files.image) {
+    //   const imageFile = req.files.image;
+    //   const fileExtension = imageFile.name.split(".").pop();
+    //   const validExtensions = ["jpeg", "jpg", "png"];
 
-      if (!validExtensions.includes(fileExtension.toLowerCase())) {
-        return res.status(400).json({ message: "Invalid file type for image" });
-      }
+    //   if (!validExtensions.includes(fileExtension.toLowerCase())) {
+    //     return res.status(400).json({ message: "Invalid file type for image" });
+    //   }
 
-      const fileName = `${userID}-image.${fileExtension}`;
-      const filePath = path.join(__dirname, "../../public/uploads", fileName);
+    //   const fileName = `${userID}-image.${fileExtension}`;
+    //   const filePath = path.join(__dirname, "../../public/uploads", fileName);
 
-      await imageFile.mv(filePath);
+    //   await imageFile.mv(filePath);
 
-      const base64Image = convertImageToBase64(filePath);
-      imgUrl = `data:image/${fileExtension};base64,${base64Image}`;
-    }
+    //   const base64Image = convertImageToBase64(filePath);
+    //   imgUrl = `data:image/${fileExtension};base64,${base64Image}`;
+    // }
 
     article.title = title;
     article.description = description;
-    article.image = imgUrl || article.image;
+    article.image = image;
 
     await article.save();
 
@@ -282,9 +276,7 @@ export const getRelatedArticles = async (req, res) => {
 export const getLatestArticles = async (req, res) => {
   try {
     // Find the latest article by sorting createdAt in descending order
-    const latestArticle = await Article.find()
-      .sort({ createdAt: -1 })
-      .exec();
+    const latestArticle = await Article.find().sort({ createdAt: -1 }).exec();
 
     if (!latestArticle) {
       return res.status(404).json({ message: "No articles found" });
