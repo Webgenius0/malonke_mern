@@ -19,6 +19,7 @@ import mongoose from "mongoose";
 export const createArticle = async (req, res) => {
   try {
     const { title, description, category, image } = req.body;
+
     const userID = req.user.id;
 
     if (!title || !description || !category || !image) {
