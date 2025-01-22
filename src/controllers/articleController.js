@@ -299,7 +299,7 @@ export const getLatestArticles = async (req, res) => {
 // Get user all articles
 export const getUserArticles = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id } = req.user;
 
     // Find all articles by the user
     const userArticles = await Article.find({ userID: id })
