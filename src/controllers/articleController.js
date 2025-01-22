@@ -69,7 +69,7 @@ export const createArticle = async (req, res) => {
 // Update article
 export const updateArticle = async (req, res) => {
   try {
-    const { title, description, image } = req.body;
+    const { title, description, image,category } = req.body;
     const userID = req.user.id;
     const { id } = req.params;
 
@@ -101,6 +101,7 @@ export const updateArticle = async (req, res) => {
     article.title = title;
     article.description = description;
     article.image = image;
+    article.category = category;
 
     await article.save();
 
