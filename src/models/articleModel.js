@@ -27,7 +27,7 @@ const articleSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      required: [true, "Image is required"],
+      required: [true, "Category is required"],
       index: true,
       trim: true,
     },
