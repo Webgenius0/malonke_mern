@@ -21,6 +21,7 @@ import profileRoutes from "./src/routes/profileRoutes.js";
 import faqRoutes from "./src/routes/FAQRoutes.js";
 import articleRoutes from "./src/routes/articleRoutes.js"
 import keyFeatureRoutes from "./src/routes/keyFeatureRoutes.js";
+import teamRoutes from "./src/routes/teamRoutes.js";
 
 dotenv.config();
 
@@ -74,6 +75,7 @@ app.use("/api/v1/reviews", reviewRoutes);
 app.use("/api/v1/features", featurePlanRoutes);
 app.use("/api/v1/articles", articleRoutes);
 app.use("/api/v1/keyFeatures", keyFeatureRoutes);
+app.use("/api/v1/team", teamRoutes);
 
 // Handle undefined routes
 app.all("*", (req, res, next) => {
