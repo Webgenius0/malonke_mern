@@ -219,42 +219,31 @@ export const deleteArticle = async (req, res) => {
 // Related article
 export const getRelatedArticles = async (req, res) => {
   try {
-    const { id } = req.params;
-
-    // Validate ID format
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "Invalid article ID format" });
-    }
-
-    // Find the target article
-    const targetArticle = await Article.findById(id);
-
-    if (!targetArticle) {
-      return res.status(404).json({ message: "Article not found" });
-    }
-
-    // Find related articles in the same category, excluding the target article
-    const { category } = targetArticle;
+    const { category } = req.params;
     const relatedArticles = await Article.find({
-      category: category,
-      _id: { $ne: id }, // Exclude the target article
+      category: { $regex: new RegExp(`^${category}$`, 'i') },
     })
-      .limit(5) // Limit to 5 related articles
-      .sort({ createdAt: -1 }) // Sort by latest
-      .exec();
+        .limit(3)
+        .sort({ createdAt: -1 })
+        .exec();
 
-    // Respond with the related articles
+    if (relatedArticles.length === 0) {
+      return res.status(404).json({ message: "No related articles found" });
+    }
+
     return res.status(200).json({
       message: "Related articles retrieved successfully",
       relatedArticles,
     });
   } catch (error) {
     console.error(error);
-    return res
-      .status(500)
-      .json({ message: "An error occurred", error: error.message });
+    return res.status(500).json({
+      message: "An error occurred while retrieving related articles",
+      error: error.message,
+    });
   }
 };
+
 
 
 //Latest article

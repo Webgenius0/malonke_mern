@@ -18,7 +18,7 @@ router.get("/", getArticles);
 router.get("/latest", getLatestArticles);
 router.get("/user", verifyToken, getUserArticles);
 router.get("/:id", getArticle);
-router.get("/related/:id", getRelatedArticles);
+router.get("/related/:category", getRelatedArticles);
 router.put("/:id", verifyToken, updateArticle);
 router.delete("/:id", verifyToken, deleteArticle);
 
