@@ -4,6 +4,8 @@
 import Article from "../models/articleModel.js";
 import User from "../models/userModel.js";
 import mongoose from "mongoose";
+import catchAsync from "../utils/catchAsync.js";
+import AppError from "../utils/AppError.js";
 
 // Define __dirname manually for ES modules
 // const __filename = fileURLToPath(import.meta.url);
@@ -108,26 +110,6 @@ export const updateArticle = async (req, res) => {
     return res
       .status(200)
       .json({ message: "Article updated successfully", article });
-  } catch (error) {
-    console.error(error);
-    return res
-      .status(500)
-      .json({ message: "An error occurred", error: error.message });
-  }
-};
-
-// Get all articles
-export const getArticles = async (req, res) => {
-  try {
-    const articles = await Article.find();
-
-    if (articles.length === 0) {
-      return res.status(404).json({ message: "No articles found" });
-    }
-
-    return res
-      .status(200)
-      .json({ message: "Articles retrieved successfully", articles });
   } catch (error) {
     console.error(error);
     return res
@@ -274,29 +256,64 @@ export const getRelatedArticles = async (req, res) => {
   }
 };
 
-// Latest artiles
-export const getLatestArticles = async (req, res) => {
-  try {
-    // Find the latest article by sorting createdAt in descending order
-    const latestArticle = await Article.find().sort({ createdAt: -1 }).exec();
 
-    if (!latestArticle) {
-      return res.status(404).json({ message: "No articles found" });
-    }
+//Latest article
+export const getLatestArticles = catchAsync(async (req, res, next) => {
+  const pipeline = [
+    { $sort: { createdAt: -1 } },
+    { $limit: 1 },
+    {
+      $lookup: {
+        from: "users",
+        localField: "userID",
+        foreignField: "_id",
+        as: "user",
+      },
+    },
+    {
+      $unwind: {
+        path: "$user",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $lookup: {
+        from: "admins",
+        localField: "user.adminID",
+        foreignField: "_id",
+        as: "admin",
+      },
+    },
+    {
+      $unwind: {
+        path: "$admin",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $project: {
+        title: 1,
+        content: 1,
+        image: 1,
+        "admin.firstName": 1,
+        "admin.lastName": 1,
+        createdAt: 1,
+      },
+    },
+  ];
 
-    // Return the latest article
-    return res.status(200).json({
-      message: "Latest article retrieved successfully",
-      article: latestArticle,
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({
-      message: "An error occurred while retrieving the latest article",
-      error: error.message,
-    });
+  const latestArticle = await Article.aggregate(pipeline);
+
+  if (!latestArticle || latestArticle.length === 0) {
+    return next(new AppError("No articles found", 404));
   }
-};
+
+  res.status(200).json({
+    message: "Latest article retrieved successfully",
+    article: latestArticle[0],
+  });
+});
+
 
 // Get user all articles
 export const getUserArticles = async (req, res) => {
@@ -327,3 +344,58 @@ export const getUserArticles = async (req, res) => {
     });
   }
 };
+
+//get all articles using aggregation
+export const getArticles = catchAsync(async (req, res,next) => {
+   const matchStage = {};
+   const joinWithUser = {
+    $lookup: {
+      from: "users",
+      localField: "userID",
+      foreignField: "_id",
+      as: "user",
+    },
+  };
+
+  const unwindStage = {
+    $unwind: {
+      path: "$user",
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+
+  const joinWithAdmin ={$lookup: {
+      from:"admins",localField: "user.adminID", foreignField: "_id",as: "admin",
+    }}
+
+  const unwindAdmin ={$unwind: {
+      path: "$admin",
+      preserveNullAndEmptyArrays: true,
+    },}
+
+  const projectStage = {
+    $project: {
+      title: 1,
+      description: 1,
+       image: 1,
+      "admin.firstName": 1,
+      "admin.lastName": 1,
+      createdAt: 1,
+    },
+  };
+
+  const data = await Article.aggregate([
+    { $match: matchStage },
+    joinWithUser,
+    unwindStage,
+    joinWithAdmin,
+    unwindAdmin,
+    projectStage
+  ]);
+
+  if (!data || data.length === 0) {
+    return next(new AppError("No data found", 404));
+  }
+
+  res.status(200).json({ status: "success", data });
+})
