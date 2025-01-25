@@ -169,14 +169,18 @@ export const createAdmin = catchAsync(async (req, res, next) => {
 // Get all admin controller
 export const getAllAdmin = async (req, res) => {
   try {
-    const AllAdmins = await Admin.find();
+    const { page = 1, limit = 10, keyword = "" } = req.query;
 
-    if (!AllAdmins) {
-      return res.status(404).json({ message: "No admin found" });
-    }
+    // Convert page and limit to integers
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+    const skip = (pageNumber - 1) * limitNumber;
 
-    // Get admins with avatars using aggregations $lookup
-    const adminsWithAvatars = await Admin.aggregate([
+    // Create a regex for case-insensitive search
+    const searchRegex = new RegExp(keyword, "i");
+
+    // Use a single aggregation with $facet for data and total count
+    const results = await Admin.aggregate([
       {
         $lookup: {
           from: "profiles",
@@ -186,31 +190,67 @@ export const getAllAdmin = async (req, res) => {
         },
       },
       {
-        $unwind: "$profile",
+        $unwind: {
+          path: "$profile",
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
-        $project: {
-          _id: 1,
-          firstName: 1,
-          lastName: 1,
-          username: 1,
-          email: 1,
-          profile: {
-            avatar: "$profile.avatar",
-          },
+        $match: {
+          $or: [
+            { firstName: searchRegex },
+            { lastName: searchRegex },
+            { email: searchRegex },
+          ],
+        },
+      },
+      {
+        $facet: {
+          data: [
+            { $skip: skip },
+            { $limit: limitNumber },
+            {
+              $project: {
+                _id: 1,
+                firstName: 1,
+                lastName: 1,
+                username: 1,
+                email: 1,
+                profile: {
+                  avatar: "$profile.avatar",
+                },
+              },
+            },
+          ],
+          totalCount: [{ $count: "total" }],
         },
       },
     ]);
 
+    const adminsWithAvatars = results[0].data;
+    const total = results[0].totalCount[0]?.total || 0;
+    const totalPages = Math.ceil(total / limitNumber);
+
+    if (!adminsWithAvatars.length) {
+      return res.status(404).json({ message: "No admin found" });
+    }
+
     return res.status(200).json({
       status: "success",
-      message: "All admin retrieved successfully",
+      message: "Admins retrieved successfully",
       data: adminsWithAvatars,
+      pagination: {
+        total,
+        totalPages,
+        currentPage: pageNumber,
+        pageSize: limitNumber,
+      },
     });
   } catch (error) {
     console.error(error);
-    return res
-      .status(500)
-      .json({ message: "An error occurred", error: error.message });
+    return res.status(500).json({
+      message: "An error occurred",
+      error: error.message,
+    });
   }
 };
