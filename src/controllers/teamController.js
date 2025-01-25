@@ -116,7 +116,7 @@ export const getCEO = catchAsync(async (req, res, next) => {
 
 // Get all team members except the CEO
 export const getTeamWithoutCEO = catchAsync(async (req, res, next) => {
-    const teamMembers = await TeamMember.find({ isCEO: false }).sort({ name: 1 });
+    const teamMembers = await TeamMember.find({ isCEO: false });
 
     if (teamMembers.length === 0) {
         return next(new AppError("No team members found.", 200));
