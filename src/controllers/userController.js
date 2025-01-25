@@ -305,6 +305,7 @@ export const getAllusers = async (req, res) => {
                 lastName: 1,
                 username: 1,
                 email: 1,
+                createdAt: 1,
                 profile: {
                   avatar: "$profile.avatar",
                 },
