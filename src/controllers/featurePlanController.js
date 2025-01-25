@@ -74,7 +74,7 @@ export const getFeature = async (req, res) => {
   }
 };
 
-// Update feture
+// Update feature
 export const updateFeature = async (req, res) => {
   try {
     const { id } = req.params;

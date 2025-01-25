@@ -40,5 +40,5 @@ const pricingSchema = new mongoose.Schema(
   }
 );
 
-const Pricing = mongoose.model("Pricing", pricingSchema);
+const Pricing = mongoose.model("pricings", pricingSchema);
 export default Pricing;
