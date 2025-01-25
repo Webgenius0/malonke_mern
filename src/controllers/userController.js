@@ -2,28 +2,28 @@ import User from "../models/userModel.js";
 import crypto from "crypto";
 import catchAsync from "../utils/catchAsync.js";
 import AppError from "../utils/AppError.js";
-import {emailUtility} from "../utils/emailUtility.js";
+import { emailUtility } from "../utils/emailUtility.js";
 import MagicLink from "../models/magicLinkModel.js";
 import Admin from "../models/adminModel.js";
 /**
  * Generate and Send Magic Link
  */
 export const sendInviteLink = catchAsync(async (req, res, next) => {
-    const { id } = req.user;
-    const { email } = req.body;
+  const { id } = req.user;
+  const { email } = req.body;
 
-    if (!email) return next(new AppError("Email is required!", 400));
+  if (!email) return next(new AppError("Email is required!", 400));
 
-    const token = crypto.randomBytes(32).toString("hex");
-    const expiration = Date.now() + 2 * 24 * 60 * 60 * 1000;
+  const token = crypto.randomBytes(32).toString("hex");
+  const expiration = Date.now() + 2 * 24 * 60 * 60 * 1000;
 
-    const magicLink = `https://malonke.netlify.app/verify?token=${token}&email=${email}`;
+  const magicLink = `https://malonke.netlify.app/verify?token=${token}&email=${email}`;
 
-    const options = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: "Invitation Link to Complete Your Registration!",
-        html: `<html>
+  const options = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: "Invitation Link to Complete Your Registration!",
+    html: `<html>
           <head>
           <style>
           body {
@@ -104,67 +104,63 @@ export const sendInviteLink = catchAsync(async (req, res, next) => {
         </div>
       </body>
     </html>`,
-    };
+  };
 
-    // Check if the magic link already exists
-    const existingMagicLink = await MagicLink.findOne({ email });
+  // Check if the magic link already exists
+  const existingMagicLink = await MagicLink.findOne({ email });
 
-    if (existingMagicLink) {
-        existingMagicLink.magicLink = magicLink;
-        existingMagicLink.isUsed = false;
-        existingMagicLink.adminID = id;
-        existingMagicLink.expiresAt = new Date(expiration);
-        await existingMagicLink.save();
-    } else {
-        await MagicLink.create({
-            email,
-            magicLink,
-            adminID: id,
-            expiresAt: new Date(expiration),
-        });
-    }
-
-    // Send the email for both cases
-    await emailUtility(options, next);
-
-    res.status(200).json({
-        success: true,
-        message: 'Invitation link sent to the provided email.',
+  if (existingMagicLink) {
+    existingMagicLink.magicLink = magicLink;
+    existingMagicLink.isUsed = false;
+    existingMagicLink.adminID = id;
+    existingMagicLink.expiresAt = new Date(expiration);
+    await existingMagicLink.save();
+  } else {
+    await MagicLink.create({
+      email,
+      magicLink,
+      adminID: id,
+      expiresAt: new Date(expiration),
     });
+  }
+
+  // Send the email for both cases
+  await emailUtility(options, next);
+
+  res.status(200).json({
+    success: true,
+    message: "Invitation link sent to the provided email.",
+  });
 });
-
-
 
 /**
  * Verify Magic Link
  */
 export const verifyMagicLink = catchAsync(async (req, res, next) => {
+  const { email, magicLink } = req.body;
 
-    const { email, magicLink } = req.body;
+  if (!email || !magicLink) {
+    return next(new AppError("Email and Magic Link are required!", 400));
+  }
 
-    if (!email || !magicLink) {
-        return next(new AppError("Email and Magic Link are required!", 400));
-    }
+  const isValid = await MagicLink.findOne({ email });
 
-    const isValid = await MagicLink.findOne({ email});
+  if (isValid.expiresAt < Date.now()) {
+    return next(new AppError("Magic Link has expired!", 400));
+  }
 
+  if (isValid.isUsed) {
+    return next(new AppError("This link has already been used.", 400));
+  }
 
-    if (isValid.expiresAt < Date.now()) {
-        return next(new AppError("Magic Link has expired!", 400));
-    }
+  isValid.isUsed = true;
+  await isValid.save();
 
-    if (isValid.isUsed) {
-        return next(new AppError("This link has already been used.", 400));
-    }
-
-    isValid.isUsed = true;
-    await isValid.save();
-
-    res.status(200).json({
-        status: "success",
-        message: "Successfully verified",
-        data: { adminID: isValid.adminID, isUsed: isValid.isUsed },
-    });
+  res.status(200).json({
+    status: "success",
+    message: "Successfully verified",
+    data: { adminID: isValid.adminID, isUsed: isValid.isUsed },
+  });
 });
 
 /**
@@ -172,92 +168,138 @@ export const verifyMagicLink = catchAsync(async (req, res, next) => {
  */
 
 export const isUserVerified = catchAsync(async (req, res, next) => {
-    const { email } = req.params;
+  const { email } = req.params;
 
-    // Validate if email exists in request parameters
-    if (!email) {
-        return next(new AppError("Email is invalid!", 400));
-    }
+  // Validate if email exists in request parameters
+  if (!email) {
+    return next(new AppError("Email is invalid!", 400));
+  }
 
-    // Check if a magic link exists and has been used
-    const isVerified = await MagicLink.findOne({ email, isUsed: true });
+  // Check if a magic link exists and has been used
+  const isVerified = await MagicLink.findOne({ email, isUsed: true });
 
-    // If no matching magic link or isUsed is false, deny access
-    if (!isVerified) {
-        return next(new AppError("Forbidden! Verification required.", 403));
-    }
+  // If no matching magic link or isUsed is false, deny access
+  if (!isVerified) {
+    return next(new AppError("Forbidden! Verification required.", 403));
+  }
 
-    // Exclude sensitive fields (like magicLink) before responding
-    const { magicLink: _, email: __, ...userData } = isVerified.toObject();
+  // Exclude sensitive fields (like magicLink) before responding
+  const { magicLink: _, email: __, ...userData } = isVerified.toObject();
 
-    // Respond with success and user data
-    return res.status(200).json({
-        status: "success",
-        data: userData,
-    });
+  // Respond with success and user data
+  return res.status(200).json({
+    status: "success",
+    data: userData,
+  });
 });
 
 /**
  * User Registration
  */
 export const createUser = catchAsync(async (req, res, next) => {
-    const {
-        adminID,
-        firstName,
-        lastName,
-        username,
-        email,
-        password,
-        confirmPassword,
-        isNdaAgree
-    } = req.body;
+  const {
+    adminID,
+    firstName,
+    lastName,
+    username,
+    email,
+    password,
+    confirmPassword,
+    isNdaAgree,
+  } = req.body;
 
-    // Check if the user already exists (based on email or username)
-    const existingUserByEmail = await User.findOne({ email });
-    if (existingUserByEmail) {
-        return next(new AppError('Email already in use', 400));
-    }
+  // Check if the user already exists (based on email or username)
+  const existingUserByEmail = await User.findOne({ email });
+  if (existingUserByEmail) {
+    return next(new AppError("Email already in use", 400));
+  }
 
-    const existingUserByUsername = await User.findOne({ username });
-    if (existingUserByUsername) {
-        return next(new AppError('Username already in use', 400));
-    }
+  const existingUserByUsername = await User.findOne({ username });
+  if (existingUserByUsername) {
+    return next(new AppError("Username already in use", 400));
+  }
 
-    if(password !== confirmPassword) {
-        return next(new AppError('Passwords do not match', 400));
-    }
+  if (password !== confirmPassword) {
+    return next(new AppError("Passwords do not match", 400));
+  }
 
-    if(!isNdaAgree){
-        return next(new AppError('User must need to agree NDA!', 400));
-    }
+  if (!isNdaAgree) {
+    return next(new AppError("User must need to agree NDA!", 400));
+  }
 
-    // Validate adminID
-    const admin = await Admin.findById(adminID);
-    console.log(admin);
-    if (!admin) {
-        return next(new AppError('Invalid Admin ID provided', 400));
-    }
+  // Validate adminID
+  const admin = await Admin.findById(adminID);
+  console.log(admin);
+  if (!admin) {
+    return next(new AppError("Invalid Admin ID provided", 400));
+  }
 
+  // Create a new user object
+  const newUser = new User({
+    superAdminID: admin.superAdminID,
+    adminID,
+    firstName,
+    lastName,
+    username,
+    email,
+    password,
+    isNdaAgree,
+  });
 
-    // Create a new user object
-    const newUser = new User({
-        superAdminID: admin.superAdminID,
-        adminID,
-        firstName,
-        lastName,
-        username,
-        email,
-        password,
-        isNdaAgree
-    });
+  await newUser.save();
 
-    await newUser.save();
-
-    // Respond with success message
-    res.status(201).json({
-        status: 'success',
-        message: 'User created successfully',
-    });
+  // Respond with success message
+  res.status(201).json({
+    status: "success",
+    message: "User created successfully",
+  });
 });
 
+// Get all user controller
+export const getAllusers = async (req, res) => {
+  try {
+    const AllUsers = await User.find();
 
+    if (!AllUsers) {
+      return res.status(404).json({ message: "No user found" });
+    }
+
+    // Get admins with avatars using aggregations $lookup
+    const usersWithAvatars = await User.aggregate([
+      {
+        $lookup: {
+          from: "profiles",
+          localField: "_id",
+          foreignField: "userID",
+          as: "profile",
+        },
+      },
+      {
+        $unwind: "$profile",
+      },
+      {
+        $project: {
+          _id: 1,
+          firstName: 1,
+          lastName: 1,
+          username: 1,
+          email: 1,
+          profile: {
+            avatar: "$profile.avatar",
+          },
+        },
+      },
+    ]);
+
+    return res.status(200).json({
+      status: "success",
+      message: "All user retrieved successfully",
+      data: usersWithAvatars,
+    });
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ message: "An error occurred", error: error.message });
+  }
+};
