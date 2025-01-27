@@ -79,7 +79,7 @@ export const getFeature = async (req, res) => {
 export const updateFeature = async (req, res) => {
   try {
     const { id } = req.params;
-    const { planName, price, billingCycle, description, features,popular } = req.body;
+    const { planName, price, billingCycle, description, features, popular } = req.body;
 
     if (!id) {
       return res.status(400).json({ message: "Invalid ID parameter" });
@@ -91,7 +91,7 @@ export const updateFeature = async (req, res) => {
     if (billingCycle) updateData.billingCycle = billingCycle;
     if (description) updateData.description = description;
     if (features) updateData.features = features;
-    if(popular) updateData.popular = popular;
+    if (popular !== undefined) updateData.popular = popular;
 
     const updatedPlan = await Pricing.findByIdAndUpdate(id, updateData, {
       new: true,
