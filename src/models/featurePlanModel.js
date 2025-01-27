@@ -33,6 +33,7 @@ const pricingSchema = new mongoose.Schema(
         trim: true,
       },
     ],
+      popular:{type:Boolean},
   },
   {
     timestamps: true,
