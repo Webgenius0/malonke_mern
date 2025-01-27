@@ -3,7 +3,7 @@ import Pricing from "../models/featurePlanModel.js";
 // Create feature
 export const createFeature = async (req, res) => {
   try {
-    const { planName, price, billingCycle, description, features } = req.body;
+    const { planName, price, billingCycle, description, features,popular } = req.body;
 
     if (!planName || !price || !billingCycle || !description || !features) {
       return res.status(400).json({ message: "All fields are required" });
@@ -15,6 +15,7 @@ export const createFeature = async (req, res) => {
       billingCycle,
       description,
       features,
+      popular
     });
 
     await newPlan.save();
@@ -78,7 +79,7 @@ export const getFeature = async (req, res) => {
 export const updateFeature = async (req, res) => {
   try {
     const { id } = req.params;
-    const { planName, price, billingCycle, description, features } = req.body;
+    const { planName, price, billingCycle, description, features,popular } = req.body;
 
     if (!id) {
       return res.status(400).json({ message: "Invalid ID parameter" });
@@ -90,6 +91,7 @@ export const updateFeature = async (req, res) => {
     if (billingCycle) updateData.billingCycle = billingCycle;
     if (description) updateData.description = description;
     if (features) updateData.features = features;
+    if(popular) updateData.popular = popular;
 
     const updatedPlan = await Pricing.findByIdAndUpdate(id, updateData, {
       new: true,
