@@ -16,13 +16,15 @@ import commonRoutes from "./src/routes/commonRoutes.js";
 import adminRoutes from "./src/routes/adminRoutes.js";
 import reviewRoutes from "./src/routes/reviewRoutes.js";
 import featurePlanRoutes from "./src/routes/featurePlanRoutes.js"
-import contactRoutes from "./src/routes/contactRoutes.js";
 import profileRoutes from "./src/routes/profileRoutes.js";
 import faqRoutes from "./src/routes/FAQRoutes.js";
 import articleRoutes from "./src/routes/articleRoutes.js"
 import keyFeatureRoutes from "./src/routes/keyFeatureRoutes.js";
 import teamRoutes from "./src/routes/teamRoutes.js";
 import packageRoutes from "./src/routes/packageRoutes.js";
+import userContactRoutes from "./src/routes/userContactRoutes.js";
+import adminContactRoutes from "./src/routes/adminContactRoutes.js";
+import contactRoutes from "./src/routes/contactRoutes.js";
 
 dotenv.config();
 
@@ -71,13 +73,15 @@ app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/common", commonRoutes);
 app.use("/api/v1/profile", profileRoutes);
 app.use("/api/v1/faqs", faqRoutes);
-app.use("/api/v1/contact", contactRoutes);
+app.use("/api/v1/user", userContactRoutes);
+app.use("/api/v1/admin", adminContactRoutes);
 app.use("/api/v1/reviews", reviewRoutes);
 app.use("/api/v1/features", featurePlanRoutes);
 app.use("/api/v1/articles", articleRoutes);
 app.use("/api/v1/keyFeatures", keyFeatureRoutes);
 app.use("/api/v1/team", teamRoutes);
 app.use("/api/v1/package", packageRoutes);
+app.use("/api/v1/external", contactRoutes);
 
 // Handle undefined routes
 app.all("*", (req, res, next) => {

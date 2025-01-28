@@ -1,11 +1,15 @@
-import Contact from "../models/contactModel.js";
 import { emailUtility } from "../utils/emailUtility.js";
+import User from "../models/userModel.js";
+import UserContact from "../models/userContactModel.js";
 
 // Create new contacts
 export const createContact = async (req, res) => {
   try {
     const { firstName, lastName, email, subject, message } = req?.body;
-    const userID = "677374fe3a118f9b68893c50" || req?.user?._id;
+    const userID = req?.user?.id;
+
+    const user = await User.findOne({_id:userID});
+    const adminID = user?.adminID;
 
     // Mail option
     const options = {
@@ -88,8 +92,9 @@ export const createContact = async (req, res) => {
     };
 
     // Create a new contact
-    const newContact = new Contact({
+    const newContact = new UserContact({
       userID,
+      adminID,
       firstName,
       lastName,
       email,
@@ -110,22 +115,22 @@ export const createContact = async (req, res) => {
   }
 };
 
-// Get all contacts
+//get all contacts
 export const getAllContacts = async (req, res) => {
   try {
-    const contacts = await Contact.find();
-    res
-      .status(200)
-      .json({ message: "Contacts get successfully!", data: contacts });
+    const contacts = await UserContact.find().sort({  createdAt: -1 });
+
+    res.status(200).json({ message: "Contacts retrieved successfully!", data: contacts });
   } catch (error) {
-    res.status(500).json({ message: "Error fatching contacts", error });
+    res.status(500).json({ message: "Error fetching contacts", error });
   }
 };
+
 
 // Get a single contact
 export const getContact = async (req, res) => {
   try {
-    const contact = await Contact.findById(req.params.id);
+    const contact = await UserContact.findById(req.params.id);
     if (!contact) return res.status(404).json({ message: "Contact not found" });
     res
       .status(200)
@@ -138,7 +143,7 @@ export const getContact = async (req, res) => {
 // Delete contact
 export const deleteContact = async (req, res) => {
   try {
-    const deleteContact = await Contact.findByIdAndDelete(req.params.id);
+    const deleteContact = await UserContact.findByIdAndDelete(req.params.id);
     if (!deleteContact)
       return res.status(404).json({ message: "Contact not found" });
     res.status(200).json({ message: "Contact deleted successfully" });
