@@ -4,7 +4,7 @@ import Review from "../models/reviewModel.js";
 export const createReview = async (req, res) => {
   try {
     const { rating, message } = req.body;
-    const userID = "67811b2e3cc1346af57fd512" || req.user.id;
+    const userID = req.user.id;
 
     // Check if the user has already reviewed the product
     const existingReview = await Review.findOne({ userID });
@@ -34,16 +34,71 @@ export const createReview = async (req, res) => {
 // Get all reviews
 export const getReviews = async (req, res) => {
   try {
-    const reviews = await Review.find();
+    const matchStage = {$match:{}};
 
+    // Join with "users" collection to get user details
+    const joinStage = {
+      $lookup: {
+        from: "users",
+        localField: "userID",
+        foreignField: "_id",
+        as: "user",
+      },
+    };
+
+    // Unwind the user array (since $lookup returns an array, we need to unwind it)
+    const unwindStage = {
+      $unwind: "$user",
+    };
+
+    // Join with "profiles" collection to get profile details
+    const joinWithProfile = {
+      $lookup: {
+        from: "profiles",
+        localField: "user._id",
+        foreignField: "userID",
+        as: "profile",
+      },
+    };
+
+    // Unwind the profile array
+    const unwindProfile = {
+      $unwind: "$profile",
+    };
+
+    // Projection stage - select fields to return
+    const projectionStage = {
+      $project: {
+        _id: 1,
+        rating: 1,
+        message: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        "user.firstName": 1,
+        "user.lastName": 1,
+        "user.email": 1,
+        "profile.avatar": 1,
+      },
+    };
+
+    // Aggregation pipeline
+    const reviews = await Review.aggregate([
+      matchStage,
+      joinStage,
+      unwindStage,
+      joinWithProfile,
+      unwindProfile,
+      projectionStage,
+    ]);
+
+    // Return the reviews
     return res.status(200).json({ reviews });
   } catch (error) {
     console.error(error);
-    return res
-      .status(500)
-      .json({ message: "An error occurred", error: error.message });
+    return res.status(500).json({ message: "An error occurred", error: error.message });
   }
 };
+
 
 // Get single reviews
 export const getReview = async (req, res) => {
