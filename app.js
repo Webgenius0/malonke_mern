@@ -25,6 +25,7 @@ import packageRoutes from "./src/routes/packageRoutes.js";
 import userContactRoutes from "./src/routes/userContactRoutes.js";
 import adminContactRoutes from "./src/routes/adminContactRoutes.js";
 import contactRoutes from "./src/routes/contactRoutes.js";
+import notificationPackageRoutes from "./src/routes/notificationPackageRoutes.js";
 
 dotenv.config();
 
@@ -82,6 +83,7 @@ app.use("/api/v1/keyFeatures", keyFeatureRoutes);
 app.use("/api/v1/team", teamRoutes);
 app.use("/api/v1/package", packageRoutes);
 app.use("/api/v1/external", contactRoutes);
+app.use("/api/v1/notification", notificationPackageRoutes);
 
 // Handle undefined routes
 app.all("*", (req, res, next) => {
