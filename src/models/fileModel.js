@@ -5,10 +5,13 @@ const fileSchema = new mongoose.Schema(
         userID: {
             type: mongoose.Schema.Types.ObjectId,
             required: [true, "User ID is required"],
+            ref:"users"
         },
-        file: {
+        fileUrl: {
             type: String,
             required: [true, "Please choose a file!"],
+            index: true,
+            trim: true,
         },
         fileName: {
             type: String,
@@ -17,9 +20,18 @@ const fileSchema = new mongoose.Schema(
             trim: true,
         },
         size: {
-            type: String,
+            type: Number,
             required: [true, "File size is required"],
+            index: true,
+            trim: true,
         },
+        starred:{type:Boolean,default:false},
+        mimetype:{
+            type: String,
+            required: [true, "File type is required"],
+            index: true,
+            trim: true,
+        }
     },
     {
         timestamps: true,

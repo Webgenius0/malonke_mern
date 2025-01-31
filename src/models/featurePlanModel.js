@@ -26,6 +26,7 @@ const pricingSchema = new mongoose.Schema(
       required: [true, "Description is required"],
       trim: true,
     },
+    storageLimit:{type:Number},
     features: [
       {
         type: String,
