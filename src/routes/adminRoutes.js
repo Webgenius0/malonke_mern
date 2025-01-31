@@ -6,6 +6,7 @@ const router = express.Router();
 
 router.post("/create", verifyToken, checkRole(["superAdmin"]), createAdmin);
 router.get("/", getAllAdmin);
-router.get("/stats",verifyToken,checkRole(['admin']), getAdminStats);
+router.get("/stats",verifyToken,checkRole(['superAdmin','admin']), getAdminStats);
+
 
 export default router;

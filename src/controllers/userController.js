@@ -5,6 +5,7 @@ import AppError from "../utils/AppError.js";
 import { emailUtility } from "../utils/emailUtility.js";
 import MagicLink from "../models/magicLinkModel.js";
 import Admin from "../models/adminModel.js";
+import File from "../models/fileModel.js";
 /**
  * Generate and Send Magic Link
  */
@@ -344,3 +345,7 @@ export const getAllusers = async (req, res) => {
     });
   }
 };
+
+
+
+

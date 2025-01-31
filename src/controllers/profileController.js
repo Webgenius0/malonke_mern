@@ -102,7 +102,7 @@ export const getUserInfo = catchAsync(async (req, res,next) => {
 
   const userData = await Model.findOne(
       { _id: id }, // Query filter
-      { _id: 1, firstName: 1, lastName: 1, email: 1 }
+      { _id: 1, firstName: 1, lastName: 1, email: 1,role:1 }
   );
 
   if (!userData) {
