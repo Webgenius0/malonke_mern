@@ -26,6 +26,12 @@ import userContactRoutes from "./src/routes/userContactRoutes.js";
 import adminContactRoutes from "./src/routes/adminContactRoutes.js";
 import contactRoutes from "./src/routes/contactRoutes.js";
 import notificationPackageRoutes from "./src/routes/notificationPackageRoutes.js";
+import s3 from "./src/utils/s3Config.js";
+import upload from "./src/middlewares/multer-config.js";
+import multer from "multer";
+import fileRoutes from "./src/routes/fileRoutes.js";
+
+
 
 dotenv.config();
 
@@ -55,7 +61,8 @@ app.use(helmet());
 app.use(mongoSanitize());
 app.use(limiter);
 app.use(cookieParser());
-app.use(fileUpload());
+
+
 
 // Root route
 app.get("/", (req, res) => {
@@ -64,6 +71,27 @@ app.get("/", (req, res) => {
         data: {
             message: "Welcome to Malonke",
         },
+    });
+});
+
+app.post('/upload', upload.single('file'), (req, res) => {
+    console.log(req.file);
+    if (!req.file) {
+        return res.status(400).send('No file uploaded');
+    }
+
+    const params = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: `${Date.now()}_${req.file.originalname}`,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype
+    };
+
+    s3.upload(params, (err, data) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.status(200).json({ message: 'File uploaded successfully', data });
     });
 });
 
@@ -84,6 +112,9 @@ app.use("/api/v1/team", teamRoutes);
 app.use("/api/v1/package", packageRoutes);
 app.use("/api/v1/external", contactRoutes);
 app.use("/api/v1/notification", notificationPackageRoutes);
+app.use("/api/v1/file",fileRoutes);
+
+
 
 // Handle undefined routes
 app.all("*", (req, res, next) => {

@@ -10,6 +10,7 @@ const adminSchema = new mongoose.Schema(
             required: [true,"Super Admin id is required!"],
             index: true
         },
+        planID:{type:mongoose.Schema.Types.ObjectId},
         firstName: {
             type: String,
             required: [true, 'First name is required'],

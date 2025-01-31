@@ -2,6 +2,9 @@ import catchAsync from "../utils/catchAsync.js";
 import AppError from "../utils/AppError.js";
 import Admin from "../models/adminModel.js";
 import { emailUtility } from "../utils/emailUtility.js";
+import User from "../models/userModel.js";
+import Package from "../models/packageModel.js";
+import File from "../models/fileModel.js";
 
 /**
  * Create Admin Controller
@@ -253,5 +256,42 @@ export const getAllAdmin = async (req, res) => {
       message: "An error occurred",
       error: error.message,
     });
+  }
+};
+
+
+
+export const getAdminStats = async (req, res) => {
+  try {
+    const userID = req.user.id;
+
+
+
+    // Fetch user package and plan
+    const userPackage = await Package.findOne({ userID: userID }).populate('planID');
+    if (!userPackage) {
+      return res.status(200).send('User package not found');
+    }
+
+    const userPlan = userPackage.planID;
+
+    // Calculate total used storage by the user
+    const totalUsedStorage = await File.aggregate([
+      { $match: { userID: userID } },
+      { $group: { _id: null, totalSize: { $sum: "$size" } } }
+    ]);
+
+    const usedStorage = totalUsedStorage[0] ? totalUsedStorage[0].totalSize : 0;
+    const totalStorage = userPlan.storageLimit;
+    const userData = await User.find({adminID: userID});
+
+    res.status(200).json({
+      totalStorage: totalStorage,
+      usedStorage: usedStorage,
+      remainingStorage: totalStorage - usedStorage,
+      totalUsers: userData.length
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
