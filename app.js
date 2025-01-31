@@ -50,7 +50,15 @@ const limiter = rateLimit({
 
 app.use(morgan("dev"));
 app.use(cors({
-    origin:"*",
+    origin:[
+        "*",
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
+        "http://localhost:5176",
+        "http://localhost:5177",
+        "https://malonke.netlify.app"
+    ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
 }));
