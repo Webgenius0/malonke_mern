@@ -4,6 +4,7 @@ import SuperAdmin from "../models/superAdminModel.js";
 import File from "../models/fileModel.js";
 import User from "../models/userModel.js";
 import Admin from "../models/adminModel.js";
+import Package from "../models/packageModel.js";
 
 export const createSuperAdmin = catchAsync(async (req, res, next) => {
     const { username, firstName, lastName, email, password, confirmPassword } = req.body;
@@ -45,14 +46,15 @@ export const createSuperAdmin = catchAsync(async (req, res, next) => {
 });
 
 //stats
-export const totalWebFileUser = catchAsync(async (req, res,next) => {
+export const totalWebFileUser = catchAsync(async (req, res, next) => {
     const files = await File.find();
     const users = await User.find();
     const admins = await Admin.find();
+    const active = await Package.find();
     res.status(200).json({
         status: 'success',
         data:{
-            totalUser:users.length,totalAdmin:admins.length,totalFiles:files.length
+            totalUser:users.length,totalAdmin:admins.length,totalFiles:files.length,activeUsers:active.length,
         }
     })
 })

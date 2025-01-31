@@ -260,7 +260,7 @@ export const getAllAdmin = async (req, res) => {
 };
 
 
-
+// Get Admin Stats
 export const getAdminStats = async (req, res) => {
   try {
     const userID = req.user.id;
@@ -284,14 +284,20 @@ export const getAdminStats = async (req, res) => {
     const usedStorage = totalUsedStorage[0] ? totalUsedStorage[0].totalSize : 0;
     const totalStorage = userPlan.storageLimit;
     const userData = await User.find({adminID: userID});
+    const fileData = await File.find({userID: userID});
 
     res.status(200).json({
       totalStorage: totalStorage,
       usedStorage: usedStorage,
       remainingStorage: totalStorage - usedStorage,
-      totalUsers: userData.length
+      totalUsers: userData.length,
+      totalFiles: fileData.length
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+
+
+//get admin users file
+

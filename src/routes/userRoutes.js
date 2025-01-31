@@ -17,4 +17,5 @@ router.get("/", getAllusers);
 router.get("/is-verified/:email", isUserVerified);
 router.get("/is-verified/:email", isUserVerified);
 
+
 export default router;
