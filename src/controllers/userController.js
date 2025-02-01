@@ -249,7 +249,10 @@ export const createUser = catchAsync(async (req, res, next) => {
   });
 
   await newUser.save();
-  await Profile.create({avatar:"https://cdn.vectorstock.com/i/500p/77/30/default-avatar-profile-icon-grey-photo-placeholder-vector-17317730.jpg"});
+  await Profile.create({
+    userID: newUser._id,
+    avatar: "https://cdn.vectorstock.com/i/500p/77/30/default-avatar-profile-icon-grey-photo-placeholder-vector-17317730.jpg",
+  });
   // Respond with success message
   res.status(201).json({
     status: "success",
