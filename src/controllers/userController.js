@@ -6,6 +6,8 @@ import { emailUtility } from "../utils/emailUtility.js";
 import MagicLink from "../models/magicLinkModel.js";
 import Admin from "../models/adminModel.js";
 import File from "../models/fileModel.js";
+import mongoose from "mongoose";
+import Profile from "../models/profileModel.js";
 /**
  * Generate and Send Magic Link
  */
@@ -18,7 +20,7 @@ export const sendInviteLink = catchAsync(async (req, res, next) => {
   const token = crypto.randomBytes(32).toString("hex");
   const expiration = Date.now() + 2 * 24 * 60 * 60 * 1000;
 
-  const magicLink = `https://malonke.netlify.app/verify?token=${token}&email=${email}`;
+  const magicLink = `${process.env.ORIGIN_URL}/verify?token=${token}&email=${email}`;
 
   const options = {
     from: process.env.EMAIL_USER,
@@ -230,7 +232,6 @@ export const createUser = catchAsync(async (req, res, next) => {
 
   // Validate adminID
   const admin = await Admin.findById(adminID);
-  console.log(admin);
   if (!admin) {
     return next(new AppError("Invalid Admin ID provided", 400));
   }
@@ -248,13 +249,14 @@ export const createUser = catchAsync(async (req, res, next) => {
   });
 
   await newUser.save();
-
+  await Profile.create({avatar:"https://cdn.vectorstock.com/i/500p/77/30/default-avatar-profile-icon-grey-photo-placeholder-vector-17317730.jpg"});
   // Respond with success message
   res.status(201).json({
     status: "success",
     message: "User created successfully",
   });
 });
+
 
 // Get all user controller
 export const getAllusers = async (req, res) => {
@@ -345,6 +347,35 @@ export const getAllusers = async (req, res) => {
     });
   }
 };
+
+
+//get admin users
+export const getAdminUsers =catchAsync(async (req, res , next) => {
+  const {id} = req.user;
+  const matchStage = { $match: { adminID: new mongoose.Types.ObjectId(id) } };
+  const joinStage = {
+     $lookup: {
+       from: "profiles",
+       localField: "_id",
+       foreignField: "userID",
+       as: "profile",
+     }
+  }
+  const unwindStage = {$unwind: {
+      path: "$profile",
+      preserveNullAndEmptyArrays: true
+    }}
+  const projectStage = {$project:{
+      password:0,"profile._id":0,"profile.userID":0,
+    }}
+  const  users = await User.aggregate([
+      matchStage,joinStage,unwindStage,projectStage
+  ])
+  if(users.length === 0){
+    return next(new AppError("No user found", 200));
+  }
+  res.status(200).json({status:"success", data: users});
+})
 
 
 

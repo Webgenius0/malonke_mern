@@ -39,15 +39,10 @@ const profileSchema = new Schema(
         },
         zip: {
             type: String,
-            validate: {
-                validator: (v) => validator.isPostalCode(v, "any"),
-                message: "Invalid ZIP/Postal code format.",
-            },
             trim: true,
         },
         gender: {
             type: String,
-            enum: ["Male", "Female", "Other"],
             default: "Male",
             trim: true,
         },
