@@ -57,6 +57,7 @@ app.use(cors({
         "http://localhost:5175",
         "http://localhost:5176",
         "http://localhost:5177",
+        "http://localhost:5178",
         "https://malonke.netlify.app"
     ],
     credentials: true,
