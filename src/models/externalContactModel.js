@@ -7,20 +7,11 @@ const externalContactSchema = new Schema(
             type: String,
             required: [true, "Name is required"],
             trim: true,
-            validate: {
-                validator: (value) => /^[a-zA-Z\s]+$/.test(value),
-                message: "Name must contain only letters and spaces",
-            },
         },
         email: {
             type: String,
             required: [true, "Email is required"],
-            unique: true,
             trim: true,
-            validate: {
-                validator: validator.isEmail,
-                message: "Email is invalid",
-            },
         },
         subject: {
             type: String,
