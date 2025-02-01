@@ -5,6 +5,7 @@ import { emailUtility } from "../utils/emailUtility.js";
 import User from "../models/userModel.js";
 import Package from "../models/packageModel.js";
 import File from "../models/fileModel.js";
+import Profile from "../models/profileModel.js";
 
 /**
  * Create Admin Controller
@@ -153,7 +154,7 @@ export const createAdmin = catchAsync(async (req, res, next) => {
   await emailUtility(options, next);
 
   // Create new user in a pending state
-  await Admin.create({
+  const newAdmin = await Admin.create({
     username,
     firstName,
     lastName,
@@ -162,6 +163,11 @@ export const createAdmin = catchAsync(async (req, res, next) => {
     password,
     isTermAgree,
     superAdminID: id,
+  });
+
+  await Profile.create({
+    userID: newAdmin._id,
+    avatar: "https://cdn.vectorstock.com/i/500p/77/30/default-avatar-profile-icon-grey-photo-placeholder-vector-17317730.jpg",
   });
 
   res

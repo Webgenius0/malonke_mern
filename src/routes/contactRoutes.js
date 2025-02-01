@@ -8,7 +8,7 @@ import {
 } from "../controllers/externalContactController.js";
 const router = express.Router();
 
-router.post("/contact", verifyToken, createExternalContact);
+router.post("/contact",  createExternalContact);
 router.get("/contact",verifyToken,checkRole(["superAdmin"]), getAllExternalContacts);
 router.get("/contact/:id",checkRole(["superAdmin"]), getExternalContactById);
 router.delete("/contact/:id",verifyToken,checkRole(["superAdmin"]), deleteExternalContact);
