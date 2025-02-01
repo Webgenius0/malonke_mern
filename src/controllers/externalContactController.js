@@ -5,7 +5,7 @@ import AppError from "../utils/AppError.js";
 
 
 export const createExternalContact = catchAsync(async (req, res, next) => {
-    const { fullName, email, subject, message } = req?.body;
+    const {fullName, email, subject, message} = req?.body;
 
     const options = {
         from: process.env.EMAIL_USER,
@@ -98,38 +98,36 @@ export const createExternalContact = catchAsync(async (req, res, next) => {
     // Send email using email utility function
     emailUtility(options);
 
-    res.status(201).json({ message: "Contact created successfully", data: newContact });
+    res.status(201).json({message: "Contact created successfully", data: newContact});
 });
 
 
 export const getAllExternalContacts = catchAsync(async (req, res, next) => {
-    const data = await Contact.find().sort({ createdAt: -1 });
-    if(data.length > 0){
-        return next(new AppError("No Contact Found!",200));
+    const data = await Contact.find().sort({createdAt: -1});
+    if (data.length === 0) {
+        return next(new AppError("No Contact Found!", 200));
     }
-    res.status(200).json({ status:"success", data });
+    res.status(200).json({status: "success", data});
 })
 
 
 export const getExternalContactById = catchAsync(async (req, res, next) => {
-    const { id } = req.params;
+    const {id} = req.params;
     const contact = await Contact.findById(id);
-
     if (!contact) {
         return next(new AppError('Contact not found', 404));
     }
 
-    res.status(200).json({ status: 'success', data: contact });
+    res.status(200).json({status: 'success', data: contact});
 });
 
 
 export const deleteExternalContact = catchAsync(async (req, res, next) => {
-    const { id } = req.params;
+    const {id} = req.params;
     const contact = await Contact.findByIdAndDelete(id);
-
     if (!contact) {
         return next(new AppError('Contact not found', 404));
     }
 
-    res.status(200).json({ status: 'success', message: 'Contact deleted successfully' });
+    res.status(200).json({status: 'success', message: 'Contact deleted successfully'});
 });
