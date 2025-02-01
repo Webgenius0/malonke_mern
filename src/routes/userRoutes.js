@@ -1,6 +1,6 @@
 import express from "express";
 import {
-  createUser,
+  createUser, getAdminUsers,
   getAllusers,
   isUserVerified,
   sendInviteLink,
@@ -16,6 +16,7 @@ router.post("/create-user", createUser);
 router.get("/", getAllusers);
 router.get("/is-verified/:email", isUserVerified);
 router.get("/is-verified/:email", isUserVerified);
+router.get("/admin-users" , verifyToken , checkRole(['admin','superAdmin']) , getAdminUsers);
 
 
 export default router;

@@ -132,7 +132,7 @@ export const getArticle = async (req, res) => {
     const article = await Article.findById(id);
 
     if (!article) {
-      return res.status(404).json({ message: "Article not found" });
+      return res.status(200).json({ message: "Article not found" });
     }
 
     // Batch aggregations using $lookup
@@ -316,7 +316,7 @@ export const getUserArticles = async (req, res) => {
 
     if (!userArticles.length) {
       return res
-        .status(404)
+        .status(200)
         .json({ message: "No articles found for this user" });
     }
 

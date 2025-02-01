@@ -115,6 +115,7 @@ export const getUserInfo = catchAsync(async (req, res,next) => {
 
 export const updateAvatar = catchAsync(async (req, res, next) => {
   const { id } = req.user;
+  console.log(id);
   const { avatar } = req.body;
 
   // Find the user profile by userID
